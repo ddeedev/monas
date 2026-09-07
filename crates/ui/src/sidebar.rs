@@ -7,8 +7,8 @@ use context::{
     tab_data::TabData,
 };
 use gpui::{
-    AnyElement, App, Entity, IntoElement, SharedString, Window, deferred, div, prelude::*, px, rgb,
-    svg,
+    AnyElement, App, Entity, IntoElement, SharedString, Window, black, deferred, div, prelude::*,
+    px, rgb, svg, white,
 };
 use http::Method;
 use std::{fmt::Debug, time::Duration};
@@ -569,32 +569,81 @@ impl AppSidebar {
             .w_full()
             .flex()
             .flex_row()
-            .flex_wrap()
-            .justify_center()
+            .items_center()
+            .justify_between()
             .h(px(30.0))
-            .gap_2()
-            .text_xl()
-            .children(self.space_logos.iter().enumerate().map(|(idx, s)| {
-                let space_number = idx + 1;
-                let is_active = space_number == self.active_space;
-
+            .text_color(white())
+            .font_weight(gpui::FontWeight::SEMIBOLD)
+            .text_base()
+            // LEFT: archive button
+            .child(
                 div()
-                    .id(("space-selection", idx as u64))
+                    .id("space-selection-archive")
+                    .flex()
+                    .items_center()
+                    .justify_center()
                     .text_base()
                     .cursor_pointer()
                     .on_click(move |_event, window, cx| {
-                        window.dispatch_action(Box::new(SwitchSpace(space_number)), cx);
+                        window.dispatch_action(Box::new(SwitchSpace(1)), cx);
                     })
-                    .text_center()
-                    .rounded(px(6.0))
-                    .w_10()
-                    .bg(if is_active {
-                        rgb(0x7A769F)
-                    } else {
-                        rgb(0x565375)
+                    .rounded_full()
+                    .w_8()
+                    .h_full()
+                    .bg(rgb(0x565375))
+                    .child("A"),
+            )
+            // CENTER: space logos
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .justify_center()
+                    .gap_1()
+                    .children(self.space_logos.iter().enumerate().map(|(idx, s)| {
+                        let space_number = idx + 1;
+                        let is_active = space_number == self.active_space;
+                        div()
+                            .id(("space-selection", idx as u64))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_base()
+                            .cursor_pointer()
+                            .on_click(move |_event, window, cx| {
+                                window.dispatch_action(Box::new(SwitchSpace(space_number)), cx);
+                            })
+                            .rounded(px(6.0))
+                            .w_8()
+                            .h_full()
+                            .bg(if is_active {
+                                rgb(0x7A769F)
+                            } else {
+                                rgb(0x565375)
+                            })
+                            .child(s.to_string().to_uppercase())
+                    })),
+            )
+            // RIGHT: add button
+            .child(
+                div()
+                    .id("space-selection-plus")
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_base()
+                    .cursor_pointer()
+                    .on_click(move |_event, window, cx| {
+                        // TODO: real add-space action
+                        window.dispatch_action(Box::new(SwitchSpace(1)), cx);
                     })
-                    .child(s.to_string())
-            }))
+                    .rounded_full()
+                    .w_8()
+                    .h_full()
+                    .bg(rgb(0x565375))
+                    .child("+"),
+            )
     }
 
     fn render_node(&self, id: &NodeId, depths: usize, cx: &mut App) -> AnyElement {
