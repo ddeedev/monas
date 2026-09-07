@@ -59,7 +59,7 @@ impl SidebarView {
         cx.notify();
     }
 
-    pub fn set_active_space(&mut self, active_space: usize, cx: &mut gpui::Context<Self>) {
+    pub fn set_active_space(&mut self, cx: &mut gpui::Context<Self>, active_space: usize) {
         if self.active_space == active_space {
             return;
         }
@@ -606,7 +606,7 @@ impl AppSidebar {
 
             match data {
                 NodeData::Tab { data, open } => self
-                    .render_tab(name.as_str(), &data, open, depths)
+                    .render_tab(id, name.as_str(), &data, open, depths)
                     .into_any_element(),
                 NodeData::Folder { children, expand } => {
                     let header = self.render_folder(id.clone(), name.as_str(), expand, depths);
@@ -627,11 +627,19 @@ impl AppSidebar {
         }
     }
 
-    fn render_tab(&self, name: &str, data: &TabData, open: bool, depths: usize) -> AnyElement {
+    fn render_tab(
+        &self,
+        id: &NodeId,
+        name: &str,
+        data: &TabData,
+        open: bool,
+        depths: usize,
+    ) -> AnyElement {
         let indent_px = 8.0 + (depths as f32 * 8.0);
-        if let TabData::ApiRequest(_tab_data) = data {
+        if let TabData::ApiRequest(tab_data) = data {
+            let favicon = self.request_favicon(tab_data.method.clone());
             div()
-                .id(SharedString::from(name.to_string()))
+                .id(SharedString::from(id.to_string()))
                 .h(px(40.))
                 .flex()
                 .flex_row()
@@ -643,18 +651,20 @@ impl AppSidebar {
                 .border_color(rgb(0x565375))
                 .text_base()
                 .cursor_pointer()
+                .when(open, |el| el.bg(rgb(0xD3D3D3)))
                 .hover(|style| style.bg(rgb(0x565375)))
                 .child(
-                    div().relative().w(px(25.0)).h(px(25.0)).child(
-                        svg()
-                            .when(!open, |el| el.path("icons/method-get.svg"))
-                            .when(open, |el| el.path("icons/method-get.svg"))
-                            .size(px(25.))
-                            .text_color(rgb(0x524C73)),
-                    ),
+                    div()
+                        .relative()
+                        .h(px(25.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .child(favicon),
                 )
                 .child(
                     div()
+                        .text_size(px(17.))
                         .child(name.to_string())
                         .font_weight(gpui::FontWeight::SEMIBOLD)
                         .text_color(rgb(0xFFFFFF)),
@@ -663,6 +673,44 @@ impl AppSidebar {
         } else {
             div().into_any_element()
         }
+    }
+
+    fn request_favicon(&self, method: Method) -> impl IntoElement {
+        let favicon = match method {
+            Method::POST => div()
+                .child("POST")
+                .text_size(px(12.))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0xFFFF00)),
+            Method::GET => div()
+                .child("GET")
+                .text_size(px(12.))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0x00FF00)),
+            Method::PUT => div()
+                .child("PUT")
+                .text_size(px(12.))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0x0000FF)),
+            Method::PATCH => div()
+                .child("PATCH")
+                .text_size(px(12.))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0x800080)),
+            Method::DELETE => div()
+                .child("DELETE")
+                .text_size(px(12.))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0xFF0000)),
+            Method::OPTIONS => div()
+                .child("OPTIONS")
+                .text_size(px(12.))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0x9400D3)),
+            _ => div(),
+        };
+
+        favicon
     }
 
     fn render_folder(
@@ -726,6 +774,7 @@ impl AppSidebar {
             )
             .child(
                 div()
+                    .text_size(px(17.))
                     .child(name.to_string())
                     .font_weight(gpui::FontWeight::SEMIBOLD)
                     .text_color(rgb(0xFFFFFF)),

@@ -89,7 +89,7 @@ impl MainContent {
         for space in [&default_space, &space_content] {
             space.sidebar.update(cx, |sidebar, sb_cx| {
                 sidebar.register_logos(sb_cx, logos.clone());
-                sidebar.set_active_space(1, sb_cx);
+                sidebar.set_active_space(sb_cx, 1);
             });
         }
 
@@ -108,7 +108,7 @@ impl MainContent {
         for space in &self.spaces {
             space.sidebar.update(cx, |sidebar, sb_cx| {
                 sidebar.register_logos(sb_cx, logos.clone());
-                sidebar.set_active_space(active, sb_cx);
+                sidebar.set_active_space(sb_cx, active);
             });
         }
     }
