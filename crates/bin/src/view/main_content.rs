@@ -56,11 +56,7 @@ impl MainContent {
             SidebarView::new(space_name.clone(), space_ctx.number, space_sidebar_entity)
         });
 
-        cx.observe(&sidebar, |_this, _sidebar, cx| cx.notify())
-            .detach();
-
         let space = cx.new(|_| space_ctx);
-        cx.observe(&space, |_this, _space, cx| cx.notify()).detach();
 
         let default_space = SpaceContent { space, sidebar };
 
@@ -171,9 +167,6 @@ impl Render for MainContent {
         div()
             .key_context("main_view")
             .track_focus(&self.focus_handle)
-            .on_action(|_: &Quit, window, _| {
-                window.remove_window();
-            })
             .on_action(cx.listener(|this, _: &ToggleSidebar, _window, cx| {
                 this.current_sidebar()
                     .update(cx, |sidebar, sb_cx| sidebar.toggle(sb_cx));

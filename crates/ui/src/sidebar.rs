@@ -403,6 +403,7 @@ impl RenderOnce for AppSidebar {
                     .m_2()
                     .mr_1()
                     .gap_2()
+                    // TODO: REPLACE WITH SEARCH
                     .child(self.render_workspace_card(space_name.as_str()))
                     .child(self.render_favorite_tap(fav_tabs))
                     .child(self.render_workspace_card(space_name.as_str()))
@@ -490,6 +491,29 @@ impl AppSidebar {
     }
 
     fn render_workspace_card(&self, workspace_name: &str) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_row()
+            .items_center()
+            .justify_center()
+            .gap_2()
+            .bg(rgb(0x7A769F))
+            .rounded(px(6.0))
+            .border_color(rgb(0x565375))
+            .text_xl()
+            .text_center()
+            .text_color(rgb(0xF8F8F8))
+            .opacity(0.5)
+            .font_family("Pacifico")
+            .child(div().child("⭐"))
+            .child(
+                div()
+                    .child(workspace_name.to_string())
+                    .font_weight(gpui::FontWeight::EXTRA_BOLD),
+            )
+    }
+
+    fn render_search_bar(&self, workspace_name: &str) -> impl IntoElement {
         div()
             .flex()
             .flex_row()
@@ -725,12 +749,16 @@ impl AppSidebar {
     }
 
     fn request_favicon(&self, method: Method) -> impl IntoElement {
-        let favicon = match method {
+        match method {
             Method::POST => div()
                 .child("POST")
                 .text_size(px(12.))
                 .font_weight(gpui::FontWeight::SEMIBOLD)
                 .text_color(rgb(0xFFFF00)),
+            //.h(px(20.))
+            //.w(px(47.))
+            //.hover(|el| el.text_color(white()))
+            //.bg(rgb(0xFFFF00)),
             Method::GET => div()
                 .child("GET")
                 .text_size(px(12.))
@@ -757,9 +785,7 @@ impl AppSidebar {
                 .font_weight(gpui::FontWeight::SEMIBOLD)
                 .text_color(rgb(0x9400D3)),
             _ => div(),
-        };
-
-        favicon
+        }
     }
 
     fn render_folder(
