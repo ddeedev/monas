@@ -1,4 +1,4 @@
-use crate::platform::set_traffic_lights_hidden;
+use crate::{platform::set_traffic_lights_hidden, search_bar};
 
 use action::SwitchSpace;
 use context::{
@@ -404,7 +404,7 @@ impl RenderOnce for AppSidebar {
                     .mr_1()
                     .gap_2()
                     // TODO: REPLACE WITH SEARCH
-                    .child(self.render_workspace_card(space_name.as_str()))
+                    .child(search_bar::SearchBar::default())
                     .child(self.render_favorite_tap(fav_tabs))
                     .child(self.render_workspace_card(space_name.as_str()))
                     .child(
