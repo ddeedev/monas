@@ -1,5 +1,5 @@
 [package]
-name = "silly"
+name = "monas"
 version = "0.1.0"
 publish.workspace = true
 edition.workspace = true

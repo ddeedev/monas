@@ -10,4 +10,6 @@ path = "src/assets.rs"
 [dependencies]
 anyhow.workspace = true
 gpui.workspace = true
-rust-embed.workspace = true
+# `include-exclude` is required for the #[include]/#[exclude] derive attributes;
+# declare it here instead of relying on feature unification from the workspace.
+rust-embed = { workspace = true, features = ["include-exclude"] }

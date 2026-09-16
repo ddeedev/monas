@@ -35,6 +35,18 @@ impl RenderOnce for SearchBar {
         div()
             .relative()
             .w_full()
+            .flex()
+            .flex_row()
+            .items_center()
+            .justify_center()
+            .gap_2()
+            .bg(rgb(0x7A769F))
+            .rounded(px(10.0))
+            .border_color(rgb(0x565375))
+            .text_xl()
+            .text_center()
+            .text_color(rgb(0xF8F8F8))
+            .opacity(0.5)
             .child(
                 // search icon
                 div()
