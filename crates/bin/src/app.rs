@@ -7,7 +7,6 @@ use gpui::{
     point, prelude::*, px,
 };
 use gpui_component::{Root, theme};
-use text_input;
 
 pub struct AppRunner;
 

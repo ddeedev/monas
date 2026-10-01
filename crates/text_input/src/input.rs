@@ -18,7 +18,19 @@ actions!(
         Right,
         SelectLeft,
         SelectRight,
+        SelectLeftWord,
+        SelectRightWord,
+        WordLeft,
+        WordRight,
+        SelectWordLeft,
+        SelectWordRight,
+        DeleteWordLeft,
+        DeleteWordRight,
+        DeleteToStart,
+        DeleteToEnd,
         SelectAll,
+        SelectHome,
+        SelectEnd,
         Home,
         End,
         ShowCharacterPalette,
@@ -42,6 +54,13 @@ pub struct TextInput {
     pub is_selecting: bool,
 }
 
+#[cfg(target_os = "macos")]
+const WORD_MOD: &str = "alt";
+#[cfg(not(target_os = "macos"))]
+const WORD_MOD: &str = "ctrl";
+
+const CONTEXT: &str = "TextInput";
+
 impl TextInput {
     pub fn new(placeholder: impl Into<SharedString>, cx: &mut Context<Self>) -> Self {
         Self {
@@ -57,29 +76,72 @@ impl TextInput {
         }
     }
     pub fn bind_keys(cx: &mut App) {
-        let ctx = Some("TextInput");
-        // TODO::
-        // delete whole line
-        // delete word
-        // select word
-        // select from current to beginning
-        // cmd + shift + v
-        cx.bind_keys([
+        let mut bindings = Vec::new();
+        bindings.extend(Self::basic_bindings());
+        bindings.extend(Self::word_bindings());
+        bindings.extend(Self::platform_bindings());
+        cx.bind_keys(bindings);
+    }
+
+    fn basic_bindings() -> Vec<KeyBinding> {
+        let ctx = Some(CONTEXT);
+        vec![
+            // Editing
             KeyBinding::new("backspace", Backspace, ctx),
             KeyBinding::new("delete", Delete, ctx),
+            KeyBinding::new("enter", Submit, ctx),
+            // Cursor and selection
             KeyBinding::new("left", Left, ctx),
             KeyBinding::new("right", Right, ctx),
             KeyBinding::new("shift-left", SelectLeft, ctx),
             KeyBinding::new("shift-right", SelectRight, ctx),
-            KeyBinding::new("secondary-a", SelectAll, ctx),
-            KeyBinding::new("secondary-v", Paste, ctx),
-            KeyBinding::new("secondary-c", Copy, ctx),
-            KeyBinding::new("secondary-x", Cut, ctx),
             KeyBinding::new("home", Home, ctx),
             KeyBinding::new("end", End, ctx),
-            KeyBinding::new("enter", Submit, ctx),
+            KeyBinding::new("shift-home", SelectHome, ctx),
+            KeyBinding::new("shift-end", SelectEnd, ctx),
+            KeyBinding::new("secondary-a", SelectAll, ctx),
+            // Clipboard
+            KeyBinding::new("secondary-c", Copy, ctx),
+            KeyBinding::new("secondary-x", Cut, ctx),
+            KeyBinding::new("secondary-v", Paste, ctx),
+        ]
+    }
+
+    fn word_bindings() -> Vec<KeyBinding> {
+        let ctx = Some(CONTEXT);
+        let key = |suffix: &str| format!("{WORD_MOD}-{suffix}");
+        vec![
+            KeyBinding::new(&key("left"), WordLeft, ctx),
+            KeyBinding::new(&key("right"), WordRight, ctx),
+            KeyBinding::new(&key("shift-left"), SelectWordLeft, ctx),
+            KeyBinding::new(&key("shift-right"), SelectWordRight, ctx),
+            KeyBinding::new(&key("backspace"), DeleteWordLeft, ctx),
+            KeyBinding::new(&key("delete"), DeleteWordRight, ctx),
+        ]
+    }
+
+    #[cfg(target_os = "macos")]
+    fn platform_bindings() -> Vec<KeyBinding> {
+        let ctx = Some(CONTEXT);
+        vec![
+            KeyBinding::new("cmd-left", Home, ctx),
+            KeyBinding::new("cmd-right", End, ctx),
+            KeyBinding::new("cmd-shift-left", SelectHome, ctx),
+            KeyBinding::new("cmd-shift-right", SelectEnd, ctx),
+            KeyBinding::new("cmd-backspace", DeleteToStart, ctx),
+            KeyBinding::new("cmd-delete", DeleteToEnd, ctx),
+            KeyBinding::new("ctrl-k", DeleteToEnd, ctx),
             KeyBinding::new("ctrl-cmd-space", ShowCharacterPalette, ctx),
-        ]);
+        ]
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn platform_bindings() -> Vec<KeyBinding> {
+        let ctx = Some(CONTEXT);
+        vec![
+            KeyBinding::new("ctrl-shift-backspace", DeleteToStart, ctx),
+            KeyBinding::new("ctrl-shift-delete", DeleteToEnd, ctx),
+        ]
     }
 
     fn left(&mut self, _: &Left, _: &mut Window, cx: &mut Context<Self>) {
@@ -100,6 +162,62 @@ impl TextInput {
 
     fn select_left(&mut self, _: &SelectLeft, _: &mut Window, cx: &mut Context<Self>) {
         self.select_to(self.previous_boundary(self.cursor_offset()), cx);
+    }
+
+    fn word_left(&mut self, _: &WordLeft, _: &mut Window, cx: &mut Context<Self>) {
+        if self.selected_range.is_empty() {
+            self.move_to(self.previous_word_boundary(self.cursor_offset()), cx);
+        } else {
+            self.move_to(self.selected_range.start, cx);
+        }
+    }
+
+    fn word_right(&mut self, _: &WordRight, _: &mut Window, cx: &mut Context<Self>) {
+        if self.selected_range.is_empty() {
+            self.move_to(self.next_word_boundary(self.selected_range.end), cx);
+        } else {
+            self.move_to(self.selected_range.end, cx);
+        }
+    }
+
+    fn select_word_left(&mut self, _: &SelectWordLeft, _: &mut Window, cx: &mut Context<Self>) {
+        self.select_to(self.previous_word_boundary(self.cursor_offset()), cx);
+    }
+
+    fn select_word_right(&mut self, _: &SelectWordRight, _: &mut Window, cx: &mut Context<Self>) {
+        self.select_to(self.next_word_boundary(self.cursor_offset()), cx);
+    }
+
+    fn delete_word_left(
+        &mut self,
+        _: &DeleteWordLeft,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selected_range.is_empty() {
+            let prev = self.previous_word_boundary(self.cursor_offset());
+            if prev == self.cursor_offset() {
+                return;
+            }
+            self.select_to(prev, cx);
+        }
+        self.replace_text_in_range(None, "", window, cx);
+    }
+
+    fn delete_word_right(
+        &mut self,
+        _: &DeleteWordRight,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selected_range.is_empty() {
+            let next = self.next_word_boundary(self.cursor_offset());
+            if next == self.cursor_offset() {
+                return;
+            }
+            self.select_to(next, cx);
+        }
+        self.replace_text_in_range(None, "", window, cx);
     }
 
     fn select_right(&mut self, _: &SelectRight, _: &mut Window, cx: &mut Context<Self>) {
@@ -292,6 +410,51 @@ impl TextInput {
             .grapheme_indices(true)
             .find_map(|(idx, _)| (idx > offset).then_some(idx))
             .unwrap_or(self.content.len())
+    }
+
+    fn previous_word_boundary(&self, offset: usize) -> usize {
+        let mut result = 0;
+        for (idx, seg) in self.content.split_word_bound_indices() {
+            if idx >= offset {
+                break;
+            }
+            if seg.chars().any(|c| c.is_alphanumeric()) {
+                result = idx;
+            }
+        }
+        result
+    }
+
+    fn next_word_boundary(&self, offset: usize) -> usize {
+        for (idx, seg) in self.content.split_word_bound_indices() {
+            let end = idx + seg.len();
+            if end > offset && seg.chars().any(|c| c.is_alphanumeric()) {
+                return end;
+            }
+        }
+        self.content.len()
+    }
+
+    fn delete_to_start(&mut self, _: &DeleteToStart, window: &mut Window, cx: &mut Context<Self>) {
+        if self.selected_range.is_empty() {
+            let cursor = self.cursor_offset();
+            if cursor == 0 {
+                return;
+            }
+            self.select_to(0, cx);
+        }
+        self.replace_text_in_range(None, "", window, cx);
+    }
+
+    fn delete_to_end(&mut self, _: &DeleteToEnd, window: &mut Window, cx: &mut Context<Self>) {
+        if self.selected_range.is_empty() {
+            let cursor = self.cursor_offset();
+            if cursor == self.content.len() {
+                return;
+            }
+            self.select_to(self.content.len(), cx);
+        }
+        self.replace_text_in_range(None, "", window, cx);
     }
 
     fn reset(&mut self) {
@@ -639,6 +802,14 @@ impl Render for TextInput {
             .on_action(cx.listener(Self::paste))
             .on_action(cx.listener(Self::cut))
             .on_action(cx.listener(Self::copy))
+            .on_action(cx.listener(Self::word_left))
+            .on_action(cx.listener(Self::word_right))
+            .on_action(cx.listener(Self::select_word_left))
+            .on_action(cx.listener(Self::select_word_right))
+            .on_action(cx.listener(Self::delete_word_left))
+            .on_action(cx.listener(Self::delete_word_right))
+            .on_action(cx.listener(Self::delete_to_start))
+            .on_action(cx.listener(Self::delete_to_end))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))
