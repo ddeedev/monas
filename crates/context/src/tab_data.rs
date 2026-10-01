@@ -1,6 +1,6 @@
-use http::{Method, request::Parts};
+use http::Method;
 use serde::{Deserialize, Serialize};
-use serde_with::{DisplayFromStr, Map, serde_as};
+use serde_with::{DisplayFromStr, serde_as};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -21,9 +21,10 @@
 | Sidebar ICON                           | Done   |
 | Floting Sidebar hover event            | Done   |
 | Favorite Tab                           | Done   |
-| Context Menu                           | Doing  |
+| Context Menu                           | Done   |
 | Folder                                 | Done   |
-| Space Switching                        | Doing  |
+| Space Switching                        | Done   |
+| Text Input                             | Doing  |
 | Request View                           | Plan   |
 | Header View                            | Plan   |
 | Authen View                            | Plan   |

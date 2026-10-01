@@ -5,13 +5,14 @@ use crate::view::{
     mock::{work_sidebar, work_space},
     space_content::SpaceContent,
 };
-use action::{Quit, ResetSidebar, SwitchSpace, ToggleSidebar};
+use action::{ResetSidebar, SwitchSpace, ToggleSidebar};
 use context::space::{ProfileId, SidebarContext, SpaceContext};
 use gpui::{
     App, Context, Entity, FocusHandle, Focusable, Global, SharedString, Window, div, prelude::*,
     px, rgb,
 };
-use ui::sidebar::SidebarView;
+use text_input::{Submit, TextInput};
+use ui::sidebar::{SidebarEvent, SidebarView};
 
 impl Global for MainContent {}
 
@@ -52,8 +53,14 @@ impl MainContent {
             sidebar: space_sidebar,
         };
 
+        let search_input = cx.new(|cx| TextInput::new("Search…", cx));
         let sidebar = cx.new(|_cx| {
-            SidebarView::new(space_name.clone(), space_ctx.number, space_sidebar_entity)
+            SidebarView::new(
+                space_name.clone(),
+                space_ctx.number,
+                space_sidebar_entity,
+                search_input,
+            )
         });
 
         let space = cx.new(|_| space_ctx);
@@ -67,13 +74,21 @@ impl MainContent {
 
         let work_sidebar = work_sidebar();
         let sidebar_ctx = cx.new(|_| work_sidebar);
+        // cx.subscribe(
+        //     &sidebar_ctx,
+        //     |_this, _sb, event: &SidebarEvent, _cx| match event {
+        //         SidebarEvent::Search(query) => { /* run the search */ }
+        //     },
+        // );
         cx.observe(&sidebar_ctx, |_this, _sidebar, cx| cx.notify())
             .detach();
 
+        let search_input = cx.new(|cx| TextInput::new("Search…", cx));
         let sidebar_view = SidebarView::new(
             work_space.name.clone().into(),
             work_space.number,
             sidebar_ctx,
+            search_input,
         );
 
         let work_space_entity = cx.new(|_| work_space);

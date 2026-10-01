@@ -13,6 +13,16 @@ use gpui::{
 use http::Method;
 use std::{fmt::Debug, time::Duration};
 
+use std::rc::Rc;
+use text_input::TextInput;
+
+pub enum SidebarEvent {
+    Search(SharedString),
+}
+impl gpui::EventEmitter<SidebarEvent> for SidebarView {}
+
+type OnSearch = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
+
 #[derive(Debug, Clone)]
 pub struct SidebarView {
     hidden: bool,
@@ -26,6 +36,7 @@ pub struct SidebarView {
     entity: Entity<SidebarContext>,
     space_logos: Vec<String>,
     active_space: usize,
+    search_input: Entity<TextInput>,
 }
 
 impl SidebarView {
@@ -35,6 +46,7 @@ impl SidebarView {
         space_name: SharedString,
         active_space: usize,
         entity: Entity<SidebarContext>,
+        search_input: Entity<TextInput>,
     ) -> Self {
         Self {
             hidden: false,
@@ -48,6 +60,7 @@ impl SidebarView {
             active_space,
             space_name,
             entity,
+            search_input,
         }
     }
 
@@ -213,6 +226,11 @@ impl Render for SidebarView {
 
         let entity = cx.entity();
 
+        let view = cx.entity();
+        let on_search: OnSearch = Rc::new(move |q, _w, cx| {
+            view.update(cx, |_, cx| cx.emit(SidebarEvent::Search(q.clone())));
+        });
+
         div()
             .h_full()
             .flex_shrink_0()
@@ -247,7 +265,12 @@ impl Render for SidebarView {
                                 self.active_space,
                                 self.entity.clone(),
                                 self.space_logos.clone(),
+                                self.search_input.clone(),
                             )
+                            .on_search({
+                                let f = on_search.clone();
+                                move |q, w, cx| f(q, w, cx)
+                            })
                             .width(self.width)
                             .toggle_sidebar(move |window, cx| {
                                 toggle(&gpui::ClickEvent::default(), window, cx);
@@ -299,7 +322,12 @@ impl Render for SidebarView {
                                             self.active_space,
                                             self.entity.clone(),
                                             self.space_logos.clone(),
+                                            self.search_input.clone(),
                                         )
+                                        .on_search({
+                                            let f = on_search.clone();
+                                            move |q, w, cx| f(q, w, cx)
+                                        })
                                         .width(self.width)
                                         .toggle_sidebar(
                                             move |window, cx| {
@@ -329,6 +357,8 @@ pub struct AppSidebar {
     active_space: usize,
     entity: Entity<SidebarContext>,
     space_logos: Vec<String>,
+    search_input: Entity<TextInput>,
+    on_search: Option<OnSearch>,
 }
 
 impl AppSidebar {
@@ -338,6 +368,7 @@ impl AppSidebar {
         active_space: usize,
         entity: Entity<SidebarContext>,
         space_logos: Vec<String>,
+        search_input: Entity<TextInput>,
     ) -> Self {
         Self {
             hide,
@@ -347,7 +378,14 @@ impl AppSidebar {
             active_space,
             space_logos,
             entity,
+            search_input,
+            on_search: None,
         }
+    }
+
+    pub fn on_search(mut self, f: impl Fn(&SharedString, &mut Window, &mut App) + 'static) -> Self {
+        self.on_search = Some(Rc::new(f));
+        self
     }
 
     pub fn width(mut self, width: f32) -> Self {
@@ -365,6 +403,11 @@ impl RenderOnce for AppSidebar {
     fn render(mut self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         if self.hide {
             return div();
+        }
+
+        let mut search = search_bar::SearchBar::new(self.search_input.clone());
+        if let Some(f) = self.on_search.take() {
+            search = search.on_search(move |q, w, cx| f(q, w, cx));
         }
 
         let on_toggle = self.on_toggle.take();
@@ -404,7 +447,7 @@ impl RenderOnce for AppSidebar {
                     .mr_1()
                     .gap_2()
                     // TODO: REPLACE WITH SEARCH
-                    .child(search_bar::SearchBar::default())
+                    .child(search)
                     .child(self.render_favorite_tap(fav_tabs))
                     .child(self.render_workspace_card(space_name.as_str()))
                     .child(

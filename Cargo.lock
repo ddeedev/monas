@@ -3588,6 +3588,7 @@ dependencies = [
  "gpui-component",
  "http",
  "serde",
+ "text-input",
  "ui",
 ]
 
@@ -6029,6 +6030,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "text-input"
+version = "0.1.0"
+dependencies = [
+ "gpui",
+ "gpui-component",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6474,6 +6484,7 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "raw-window-handle",
+ "text-input",
 ]
 
 [[package]]

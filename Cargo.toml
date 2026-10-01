@@ -9,6 +9,7 @@ members = [
   "crates/context",
   "crates/ui",
   "crates/action",
+  "crates/text_input",
 ]
 
 [workspace.package]
@@ -20,6 +21,7 @@ assets = { path = "crates/assets" }
 action = { path = "crates/action" }
 context = { path = "crates/context" }
 settings = { path = "crates/settings" }
+text-input = { path = "crates/text_input" }
 anyhow = "1.0.102"
 gpui = "0.2.2"
 gpui-component = "0.5.1"
