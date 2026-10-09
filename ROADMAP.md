@@ -24,13 +24,13 @@
 | Context Menu                           | Done   |
 | Folder                                 | Done   |
 | Space Switching                        | Done   |
-| Text Input                             | Doing  |
+| Text Input                             | Done   |
+| Config                                 | Doing  |
 | Request View                           | Plan   |
 | Header View                            | Plan   |
 | Authen View                            | Plan   |
 | ENV View                               | Plan   |
 | Theme per Profile                      | Plan   |
-| Config                                 | Plan   |
 
 ### Funtional
 

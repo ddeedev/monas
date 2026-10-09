@@ -30,6 +30,7 @@ actions!(
         DeleteToEnd,
         SelectAll,
         SelectHome,
+        SelectStart,
         SelectEnd,
         Home,
         End,
@@ -126,7 +127,7 @@ impl TextInput {
         vec![
             KeyBinding::new("cmd-left", Home, ctx),
             KeyBinding::new("cmd-right", End, ctx),
-            KeyBinding::new("cmd-shift-left", SelectHome, ctx),
+            KeyBinding::new("cmd-shift-left", SelectStart, ctx),
             KeyBinding::new("cmd-shift-right", SelectEnd, ctx),
             KeyBinding::new("cmd-backspace", DeleteToStart, ctx),
             KeyBinding::new("cmd-delete", DeleteToEnd, ctx),
@@ -186,6 +187,14 @@ impl TextInput {
 
     fn select_word_right(&mut self, _: &SelectWordRight, _: &mut Window, cx: &mut Context<Self>) {
         self.select_to(self.next_word_boundary(self.cursor_offset()), cx);
+    }
+
+    fn select_to_start(&mut self, _: &SelectStart, window: &mut Window, cx: &mut Context<Self>) {
+        self.select_to(0, cx);
+    }
+
+    fn select_to_end(&mut self, _: &SelectEnd, window: &mut Window, cx: &mut Context<Self>) {
+        self.select_to(self.content.len(), cx);
     }
 
     fn delete_word_left(
@@ -805,6 +814,9 @@ impl Render for TextInput {
             .on_action(cx.listener(Self::word_left))
             .on_action(cx.listener(Self::word_right))
             .on_action(cx.listener(Self::select_word_left))
+            .on_action(cx.listener(Self::select_word_right))
+            .on_action(cx.listener(Self::select_to_end))
+            .on_action(cx.listener(Self::select_to_start))
             .on_action(cx.listener(Self::select_word_right))
             .on_action(cx.listener(Self::delete_word_left))
             .on_action(cx.listener(Self::delete_word_right))

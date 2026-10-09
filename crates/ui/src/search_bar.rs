@@ -58,14 +58,14 @@ impl RenderOnce for SearchBar {
             .on_mouse_down(MouseButton::Left, move |_, window, _cx| {
                 window.focus(&focus_handle); // newer gpui: window.focus(&focus_handle, _cx)
             })
-            .child(
-                svg()
-                    .path("icons/search.svg")
-                    .size(px(15.0))
-                    .flex_shrink_0()
-                    .text_color(rgb(0xF8F8F8))
-                    .opacity(0.6),
-            )
+            //.child(
+            //    svg()
+            //        .path("icons/search.svg")
+            //        .size(px(15.0))
+            //        .flex_shrink_0()
+            //        .text_color(rgb(0xF8F8F8))
+            //        .opacity(0.6),
+            //)
             .child(
                 div()
                     .flex_1()
