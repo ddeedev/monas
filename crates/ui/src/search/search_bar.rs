@@ -5,7 +5,7 @@ use gpui::{
 use std::rc::Rc;
 use text_input::{Submit, TextInput};
 
-type OnSearch = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
+use super::OnSearch;
 
 #[derive(IntoElement)]
 pub struct SearchBar {

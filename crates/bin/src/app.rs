@@ -7,6 +7,7 @@ use gpui::{
     point, prelude::*, px,
 };
 use gpui_component::{Root, theme};
+use ui::search::popup;
 
 pub struct AppRunner;
 
@@ -17,6 +18,7 @@ impl AppRunner {
             load_fonts_asset(cx);
             action::register_keybind(cx);
             text_input::TextInput::bind_keys(cx);
+            popup::Popup::bind_keys(cx);
             init_app_menu(cx);
 
             theme::init(cx);

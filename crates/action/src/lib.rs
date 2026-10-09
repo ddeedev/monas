@@ -1,6 +1,9 @@
 use gpui::{Action, App, KeyBinding, actions};
 
-actions!(app, [ToggleSidebar, Quit, CloseTab, ResetSidebar]);
+actions!(
+    app,
+    [ToggleSidebar, Quit, CloseTab, ResetSidebar, OpenSearchPopup]
+);
 
 #[derive(Clone, Debug, PartialEq, Action)]
 #[action(namespace = app, no_json)]
@@ -16,6 +19,7 @@ pub fn register_keybind(cx: &mut App) {
         KeyBinding::new("ctrl-1", SwitchSpace(1), None),
         KeyBinding::new("ctrl-2", SwitchSpace(2), None),
         KeyBinding::new("ctrl-3", SwitchSpace(3), None),
+        KeyBinding::new("cmd-t", OpenSearchPopup, None),
     ]);
 }
 

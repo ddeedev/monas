@@ -1,4 +1,5 @@
-use crate::{platform::set_traffic_lights_hidden, search_bar};
+use crate::platform::set_traffic_lights_hidden;
+use crate::search::SearchBar;
 
 use action::SwitchSpace;
 use context::{
@@ -405,7 +406,7 @@ impl RenderOnce for AppSidebar {
             return div();
         }
 
-        let mut search = search_bar::SearchBar::new(self.search_input.clone());
+        let mut search = SearchBar::new(self.search_input.clone());
         if let Some(f) = self.on_search.take() {
             search = search.on_search(move |q, w, cx| f(q, w, cx));
         }

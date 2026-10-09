@@ -5,14 +5,17 @@ use crate::view::{
     mock::{work_sidebar, work_space},
     space_content::SpaceContent,
 };
-use action::{ResetSidebar, SwitchSpace, ToggleSidebar};
+use action::{OpenSearchPopup, ResetSidebar, SwitchSpace, ToggleSidebar};
 use context::space::{ProfileId, SidebarContext, SpaceContext};
 use gpui::{
-    App, Context, Entity, FocusHandle, Focusable, Global, SharedString, Window, div, prelude::*,
-    px, rgb,
+    App, Context, Entity, FocusHandle, Focusable, Global, SharedString, Window, deferred, div,
+    prelude::*, px, rgb,
 };
 use text_input::{Submit, TextInput};
-use ui::sidebar::{SidebarEvent, SidebarView};
+use ui::{
+    search::popup::{Popup, PopupEvent},
+    sidebar::{SidebarEvent, SidebarView},
+};
 
 impl Global for MainContent {}
 
@@ -64,8 +67,12 @@ impl MainContent {
         });
 
         let space = cx.new(|_| space_ctx);
-
-        let default_space = SpaceContent { space, sidebar };
+        let popup_text = cx.new(|cx| TextInput::new("", cx));
+        let default_space = SpaceContent {
+            space,
+            sidebar,
+            popup_search: cx.new(|cx| Popup::new(popup_text, vec![], cx)),
+        };
 
         let work_space = work_space();
         if let Some(logo) = work_space.name.chars().nth(0) {
@@ -74,12 +81,7 @@ impl MainContent {
 
         let work_sidebar = work_sidebar();
         let sidebar_ctx = cx.new(|_| work_sidebar);
-        // cx.subscribe(
-        //     &sidebar_ctx,
-        //     |_this, _sb, event: &SidebarEvent, _cx| match event {
-        //         SidebarEvent::Search(query) => { /* run the search */ }
-        //     },
-        // );
+
         cx.observe(&sidebar_ctx, |_this, _sidebar, cx| cx.notify())
             .detach();
 
@@ -95,13 +97,37 @@ impl MainContent {
         cx.observe(&work_space_entity, |_this, _sidebar, cx| cx.notify())
             .detach();
 
-        let space_content = SpaceContent::new(work_space_entity, cx.new(|_| sidebar_view));
+        let popup_text = cx.new(|cx| TextInput::new("", cx));
+        let space_popup = cx.new(|cx| Popup::new(popup_text, vec![], cx));
+        let space_content =
+            SpaceContent::new(work_space_entity, cx.new(|_| sidebar_view), space_popup);
 
         for space in [&default_space, &space_content] {
             space.sidebar.update(cx, |sidebar, sb_cx| {
                 sidebar.register_logos(sb_cx, logos.clone());
                 sidebar.set_active_space(sb_cx, 1);
             });
+        }
+
+        for space in [&default_space, &space_content] {
+            cx.subscribe(
+                &space.popup_search,
+                |this, popup, event: &PopupEvent, cx| {
+                    match event {
+                        PopupEvent::Dismiss => {}
+                        PopupEvent::Open(data) => {
+                            // TODO: switch to the tab for `data`
+                        }
+                        PopupEvent::Search(text) => {
+                            // TODO: run a search / navigate with `text`
+                        }
+                    }
+                    popup.update(cx, |p, cx| p.close(cx));
+                    this.focused = false;
+                    cx.notify();
+                },
+            )
+            .detach();
         }
 
         Self {
@@ -158,6 +184,10 @@ impl MainContent {
         self.spaces[self.current_space - 1].sidebar.clone()
     }
 
+    pub fn current_search(&self) -> Entity<Popup> {
+        self.spaces[self.current_space - 1].popup_search.clone()
+    }
+
     pub fn retrive_logos(&self) -> Vec<String> {
         self.space_logos.clone()
     }
@@ -176,8 +206,12 @@ impl Render for MainContent {
             self.focused = true;
         }
 
+        // sidebar
         let current_sidebar = self.current_sidebar();
         let sidebar_fraction = current_sidebar.read(cx).visible_fraction();
+
+        // popup
+        let current_popup = self.current_search();
 
         div()
             .key_context("main_view")
@@ -192,6 +226,10 @@ impl Render for MainContent {
             .on_action(cx.listener(|this, _: &ResetSidebar, _window, cx| {
                 this.current_sidebar()
                     .update(cx, |sidebar, sb_cx| sidebar.reset(sb_cx));
+            }))
+            .on_action(cx.listener(|this, _: &OpenSearchPopup, window, cx| {
+                this.current_search()
+                    .update(cx, |popup, cx| popup.open(window, cx));
             }))
             .flex()
             .flex_row()
@@ -223,6 +261,6 @@ impl Render for MainContent {
                     })),
             )
             // request UI
-            .child(div().flex_col().flex_col())
+            .child(div().flex_col().flex_col().child(current_popup))
     }
 }
