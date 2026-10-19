@@ -261,6 +261,11 @@ impl Render for MainContent {
                     })),
             )
             // request UI
-            .child(div().flex_col().flex_col().child(current_popup))
+            .child(
+                div()
+                    .absolute()
+                    .size_full()
+                    .child(current_popup),
+            )
     }
 }
