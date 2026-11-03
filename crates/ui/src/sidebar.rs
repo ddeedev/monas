@@ -3,9 +3,9 @@ use crate::search::SearchBar;
 
 use action::SwitchSpace;
 use context::{
+    TabData,
     node::{NodeData, NodeId},
     space::SidebarContext,
-    tab_data::TabData,
 };
 use gpui::{
     AnyElement, App, Entity, IntoElement, SharedString, Window, black, deferred, div, prelude::*,

@@ -1,4 +1,4 @@
-use crate::tab_data::TabData;
+use crate::TabData;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

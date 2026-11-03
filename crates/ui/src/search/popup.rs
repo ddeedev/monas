@@ -1,4 +1,4 @@
-use context::tab_data::BrowserData;
+use context::BrowserData;
 use gpui::{
     App, Context, Entity, EventEmitter, IntoElement, KeyBinding, MouseButton, Render, SharedString,
     Window, actions, deferred, div, prelude::*, px, rgb, rgba, svg,

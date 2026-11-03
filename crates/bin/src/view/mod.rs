@@ -4,9 +4,10 @@ pub mod space_content;
 mod mock {
     use std::collections::HashMap;
 
+    use context::TabData;
+    use context::api::tab::ApiRequestData;
     use context::node::{Node, NodeData, NodeId};
     use context::space::{ProfileContext, ProfileId, SidebarContext, SpaceContext};
-    use context::tab_data::{ApiRequestData, TabData};
     use http::Method;
 
     pub fn sidebar_context() -> SidebarContext {
@@ -426,17 +427,17 @@ mod mock {
     }
 
     pub fn work_space() -> SpaceContext {
-        SpaceContext::new("personal".to_string(), 1, profile("profile_1"))
+        SpaceContext::new("personal".to_string(), 1, String::from("profile1"))
     }
 
     pub fn spaces() -> Vec<SpaceContext> {
-        let mut personal = SpaceContext::new("personal".to_string(), 1, profile("profile_1"));
+        let mut personal = SpaceContext::new("personal".to_string(), 1, String::from("profile1"));
         personal.sidebar = sidebar_context();
 
-        let mut work = SpaceContext::new("work".to_string(), 2, profile("profile_2"));
+        let mut work = SpaceContext::new("work".to_string(), 2, String::from("profile2"));
         work.sidebar = work_sidebar();
 
-        let mut lab = SpaceContext::new("lab".to_string(), 3, profile("profile_3"));
+        let mut lab = SpaceContext::new("lab".to_string(), 3, String::from("profile3"));
         lab.sidebar = lab_sidebar();
 
         vec![personal, work, lab]

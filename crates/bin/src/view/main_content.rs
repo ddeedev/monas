@@ -28,9 +28,9 @@ pub struct MainContent {
 }
 
 impl MainContent {
-    pub fn global(cx: &App) -> &Self {
-        cx.global()
-    }
+    //pub fn global(cx: &App) -> &Self {
+    //    cx.global()
+    //}
 
     // TODO::
     // Using db or local space file instead of hardcode
@@ -47,11 +47,7 @@ impl MainContent {
         let space_ctx = SpaceContext {
             id: context::space::SpaceId(1.to_string()),
             number: 1,
-            profile: context::space::ProfileContext {
-                id: ProfileId::new(),
-                pseudonym: "profile_1".to_string(),
-                email: None,
-            },
+            profile: ProfileId::new(),
             name: space_name.to_string(),
             sidebar: space_sidebar,
         };
@@ -261,11 +257,6 @@ impl Render for MainContent {
                     })),
             )
             // request UI
-            .child(
-                div()
-                    .absolute()
-                    .size_full()
-                    .child(current_popup),
-            )
+            .child(div().absolute().size_full().child(current_popup))
     }
 }
