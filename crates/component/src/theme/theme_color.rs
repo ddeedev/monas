@@ -29,6 +29,7 @@ pub struct ThemeColor {
     pub folder_bg: Rgba,
     pub folder_hover: Rgba,
     pub folder_text: Rgba,
+    pub folder_outline: Rgba,
 
     // tab
     pub tab_bg: Rgba,

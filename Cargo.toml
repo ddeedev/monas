@@ -1,10 +1,10 @@
 
 [workspace]
-default-members = ["crates/bin"]
+default-members = ["crates/app"]
 resolver = "2"
 members = [
   "crates/assets",
-  "crates/bin",
+  "crates/app",
   "crates/settings",
   "crates/context",
   "crates/ui",

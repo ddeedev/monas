@@ -882,10 +882,10 @@ impl AppSidebar {
         depths: usize,
         t: &Theme,
     ) -> impl IntoElement {
-        let (hover, active, text) = (
-            t.theme_color.tile_bg_hover,
-            t.theme_color.tile_bg_active,
+        let (text, hover, folder_bg) = (
             t.theme_color.text,
+            t.theme_color.tile_bg_hover,
+            t.theme_color.folder_bg,
         );
         let indent_px = 8.0 + (depths as f32 * 8.0);
         let node_id_clone = node_id.clone();
@@ -926,7 +926,8 @@ impl AppSidebar {
                             .when(!expand, |el| el.path("icons/folder-fill.svg"))
                             .when(expand, |el| el.path("icons/folder-open-fill.svg"))
                             .size(px(25.))
-                            .text_color(rgb(0x524C73)),
+                            // svg fill
+                            .text_color(folder_bg),
                     )
                     .child(
                         svg()
@@ -936,7 +937,7 @@ impl AppSidebar {
                             .when(!expand, |el| el.path("icons/folder-outline.svg"))
                             .when(expand, |el| el.path("icons/folder-open-outline.svg"))
                             .size(px(25.))
-                            .text_color(rgb(0x7A769F)),
+                            .text_color(text),
                     ),
             )
             .child(
@@ -944,7 +945,7 @@ impl AppSidebar {
                     .text_size(px(17.))
                     .child(name.to_string())
                     .font_weight(gpui::FontWeight::SEMIBOLD)
-                    .text_color(rgb(0xFFFFFF)),
+                    .text_color(text),
             )
     }
 }

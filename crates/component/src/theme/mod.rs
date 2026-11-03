@@ -36,7 +36,8 @@ impl Theme {
                 essential_hover: rgb(0x565375),
                 essential_active: rgb(0x8F8BB5),
 
-                folder_bg: rgb(0x636080),
+                folder_bg: rgb(0x8F8BB5),
+                folder_outline: rgb(0x7A769F),
                 folder_hover: rgb(0x565375),
                 folder_text: rgb(0xFFFFFF),
 
@@ -79,7 +80,8 @@ impl Theme {
                 essential_active: rgb(0xE67FAA),
 
                 // folder & pinned tab
-                folder_bg: rgb(0xF4B6CF),
+                folder_bg: rgb(0xE67FAA),
+                folder_outline: rgb(0x4A1F36),
                 folder_hover: rgb(0xEFA3C3),
                 folder_text: rgb(0x4A1F36),
 
