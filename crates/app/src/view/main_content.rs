@@ -10,6 +10,7 @@ use gpui::{
 };
 use text_input::{Submit, TextInput};
 use ui::{
+    ActiveTheme,
     search::popup::{Popup, PopupEvent},
     sidebar::{SidebarEvent, SidebarView},
 };
@@ -163,7 +164,7 @@ impl Focusable for MainContent {
 impl Render for MainContent {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if !self.focused {
-            window.focus(&self.focus_handle);
+            window.focus(&self.focus_handle, cx);
             self.focused = true;
         }
 
@@ -174,9 +175,15 @@ impl Render for MainContent {
         // popup
         let current_popup = self.current_search();
 
+        let theme = cx.theme().clone();
+
         div()
             .key_context("main_view")
             .track_focus(&self.focus_handle)
+            .font_family(theme.font_family.clone())
+            .text_size(theme.font_size)
+            .text_color(theme.theme_color.text)
+            .bg(theme.theme_color.background)
             .on_action(cx.listener(|this, _: &ToggleSidebar, _window, cx| {
                 this.current_sidebar()
                     .update(cx, |sidebar, sb_cx| sidebar.toggle(sb_cx));
@@ -195,7 +202,7 @@ impl Render for MainContent {
             .flex()
             .flex_row()
             .size_full()
-            .bg(rgb(0x636080))
+            .bg(theme.theme_color.background)
             .child(current_sidebar)
             .child(
                 div()
@@ -205,17 +212,18 @@ impl Render for MainContent {
                     .m_2()
                     .ml(px(8.0 * (1.0 - sidebar_fraction)))
                     // 2. The styling for the card stroke containe
-                    .bg(rgb(0x7A769F))
+                    .bg(theme.theme_color.tile_bg)
+                    //.bg(theme.theme_color.tile_bg)
                     .rounded(px(12.0))
                     .border_1()
-                    .border_color(rgb(0x565375))
+                    .border_color(theme.theme_color.border)
                     // Layout and inner children styling
                     .p_4()
                     .gap_3()
                     .justify_center()
                     .items_center()
                     .text_xl()
-                    .text_color(rgb(0xffffff))
+                    .text_color(theme.theme_color.text)
                     .on_mouse_move(cx.listener(|this, _: &gpui::MouseMoveEvent, _window, cx| {
                         this.current_sidebar()
                             .update(cx, |sidebar, cx| sidebar.set_floating_visible(false, cx));

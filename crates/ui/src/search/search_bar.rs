@@ -1,3 +1,4 @@
+use component::theme::ActiveTheme;
 use gpui::{
     App, Entity, IntoElement, MouseButton, RenderOnce, SharedString, Window, div, prelude::*, px,
     rgb, svg,
@@ -38,6 +39,7 @@ fn submit(input: &Entity<TextInput>, on_search: &OnSearch, window: &mut Window, 
 impl RenderOnce for SearchBar {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let focus_handle = self.input.read(cx).focus_handle.clone();
+        let theme = cx.theme().clone();
 
         let mut root = div()
             .id("search-bar")
@@ -48,15 +50,15 @@ impl RenderOnce for SearchBar {
             .flex_row()
             .items_center()
             .gap_2()
-            .bg(rgb(0x7A769F))
+            .bg(theme.theme_color.searchbar_bg)
             .rounded(px(10.0))
             .border_1()
-            .border_color(rgb(0x565375))
+            .border_color(theme.theme_color.border)
             .text_sm()
-            .text_color(rgb(0xF8F8F8))
+            .text_color(theme.theme_color.text)
             .cursor_text()
             .on_mouse_down(MouseButton::Left, move |_, window, _cx| {
-                window.focus(&focus_handle); // newer gpui: window.focus(&focus_handle, _cx)
+                window.focus(&focus_handle, _cx);
             })
             //.child(
             //    svg()
@@ -87,8 +89,8 @@ impl RenderOnce for SearchBar {
                     .py(px(5.0))
                     .rounded(px(6.0))
                     .cursor_pointer()
-                    .bg(rgb(0x565375))
-                    .hover(|s| s.bg(rgb(0x494765)))
+                    .bg(theme.theme_color.button_bg)
+                    .hover(move |s| s.bg(theme.theme_color.button_hover))
                     .text_xs()
                     .font_weight(gpui::FontWeight::SEMIBOLD)
                     .child("Search")

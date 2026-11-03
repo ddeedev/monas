@@ -1,5 +1,5 @@
-use crate::platform::set_traffic_lights_hidden;
 use crate::search::SearchBar;
+use crate::{Theme, platform::set_traffic_lights_hidden};
 
 use action::SwitchSpace;
 use context::{
@@ -8,12 +8,13 @@ use context::{
     space::SidebarContext,
 };
 use gpui::{
-    AnyElement, App, Entity, IntoElement, SharedString, Window, black, deferred, div, prelude::*,
-    px, rgb, svg, white,
+    AnyElement, App, Entity, IntoElement, SharedString, Window, deferred, div, prelude::*, px, rgb,
+    svg, white,
 };
 use http::Method;
 use std::{fmt::Debug, time::Duration};
 
+use crate::ActiveTheme;
 use std::rc::Rc;
 use text_input::TextInput;
 
@@ -232,6 +233,10 @@ impl Render for SidebarView {
             view.update(cx, |_, cx| cx.emit(SidebarEvent::Search(q.clone())));
         });
 
+        let theme = cx.theme().clone();
+
+        let (tile) = (theme.theme_color.tile_bg_active);
+
         div()
             .h_full()
             .flex_shrink_0()
@@ -284,7 +289,7 @@ impl Render for SidebarView {
                         .w(px(3.0))
                         .h_full()
                         .cursor_col_resize()
-                        .hover(|s| s.bg(rgb(0x827e7e)))
+                        .hover(move |s| s.bg(tile))
                         .on_drag(SidebarResizeDrag, |_, _, _, cx| {
                             cx.new(|_| SidebarResizeDrag)
                         }),
@@ -406,13 +411,15 @@ impl RenderOnce for AppSidebar {
             return div();
         }
 
+        let theme = cx.theme().clone();
+
         let mut search = SearchBar::new(self.search_input.clone());
         if let Some(f) = self.on_search.take() {
             search = search.on_search(move |q, w, cx| f(q, w, cx));
         }
 
         let on_toggle = self.on_toggle.take();
-        let header = self.render_header_with_toggle(on_toggle);
+        let header = self.render_header_with_toggle(on_toggle, &theme);
         let space_name: SharedString = self.space_name.to_string().into();
         let mut fav_tabs: Vec<&TabData> = Vec::new();
         let space = self.entity.read(cx).clone();
@@ -435,7 +442,10 @@ impl RenderOnce for AppSidebar {
             .w(px(self.width))
             .flex_shrink_0()
             .h_full()
-            .bg(rgb(0x636080))
+            .bg(theme.theme_color.background)
+            .font_family(theme.font_family.clone())
+            .text_size(theme.font_size)
+            .text_color(theme.theme_color.text)
             .flex()
             .flex_col()
             .child(header)
@@ -449,21 +459,32 @@ impl RenderOnce for AppSidebar {
                     .gap_2()
                     // TODO: REPLACE WITH SEARCH
                     .child(search)
-                    .child(self.render_favorite_tap(fav_tabs))
-                    .child(self.render_workspace_card(space_name.as_str()))
+                    .child(self.render_essential(fav_tabs, &theme))
+                    .child(self.render_workspace_card(space_name.as_str(), &theme))
                     .child(
                         div()
+                            .text_size(theme.folder_font_size)
+                            .font_family(theme.folder_font.clone())
                             .gap_2()
                             .flex_1()
-                            .children(folder.clone().iter().map(|f| self.render_node(f, 0, cx))),
+                            .children(
+                                folder
+                                    .iter()
+                                    .map(|f| self.render_node(&space, f, 0, &theme)),
+                            ),
                     )
-                    .child(self.render_space_selection()),
+                    .child(self.render_space_selection(&theme)),
             )
     }
 }
 
 impl AppSidebar {
-    fn render_header_with_toggle(&self, on_toggle: Option<ToggleHadler>) -> impl IntoElement {
+    fn render_header_with_toggle(
+        &self,
+        on_toggle: Option<ToggleHadler>,
+        t: &Theme,
+    ) -> impl IntoElement {
+        let (hover, outline) = (t.theme_color.tile_bg, t.theme_color.sidebar_outline);
         let mut toggle_btn = div()
             .id("sidebar-toggle")
             .w(px(30.0))
@@ -473,13 +494,13 @@ impl AppSidebar {
             .flex()
             .justify_center()
             .items_center()
-            .hover(|style| style.bg(rgb(0x7A769F)))
+            .hover(move |style| style.bg(hover))
             .child(
                 svg()
                     .path("icons/sidebar-left.svg")
                     .w(px(18.0))
                     .h(px(16.0))
-                    .text_color(rgb(0xF8F8F8))
+                    .text_color(outline)
                     .opacity(0.5),
             );
 
@@ -534,21 +555,27 @@ impl AppSidebar {
             )
     }
 
-    fn render_workspace_card(&self, workspace_name: &str) -> impl IntoElement {
+    fn render_workspace_card(&self, workspace_name: &str, t: &Theme) -> impl IntoElement {
+        let (text, bg, tile, space_name_font) = (
+            t.theme_color.text,
+            t.theme_color.background,
+            t.theme_color.tile_bg,
+            t.space_name_font.clone(),
+        );
         div()
             .flex()
             .flex_row()
             .items_center()
             .justify_center()
             .gap_2()
-            .bg(rgb(0x7A769F))
+            .bg(bg)
             .rounded(px(6.0))
-            .border_color(rgb(0x565375))
+            .border_color(tile)
             .text_xl()
             .text_center()
-            .text_color(rgb(0xF8F8F8))
+            .text_color(text)
             .opacity(0.5)
-            .font_family("Pacifico")
+            .font_family(space_name_font)
             .child(div().child("⭐"))
             .child(
                 div()
@@ -557,30 +584,12 @@ impl AppSidebar {
             )
     }
 
-    fn render_search_bar(&self, workspace_name: &str) -> impl IntoElement {
-        div()
-            .flex()
-            .flex_row()
-            .items_center()
-            .justify_center()
-            .gap_2()
-            .bg(rgb(0x7A769F))
-            .rounded(px(6.0))
-            .border_color(rgb(0x565375))
-            .text_xl()
-            .text_center()
-            .text_color(rgb(0xF8F8F8))
-            .opacity(0.5)
-            .font_family("Pacifico")
-            .child(div().child("⭐"))
-            .child(
-                div()
-                    .child(workspace_name.to_string())
-                    .font_weight(gpui::FontWeight::EXTRA_BOLD),
-            )
-    }
-
-    fn render_favorite_tap(&self, tabs: Vec<&TabData>) -> impl IntoElement {
+    fn render_essential(&self, tabs: Vec<&TabData>, t: &Theme) -> impl IntoElement {
+        let (bg, hover, text) = (
+            t.theme_color.tile_bg,
+            t.theme_color.tile_bg_hover,
+            t.theme_color.text,
+        );
         div()
             .w_full()
             .flex()
@@ -589,11 +598,11 @@ impl AppSidebar {
             .justify_start()
             .gap_2()
             .text_xl()
-            .text_color(rgb(0xF8F8F8))
+            .text_color(text)
             .children(tabs.iter().enumerate().map(|(index, tab)| {
                 let element_id: gpui::SharedString = format!("grid-item-{}", index).into();
                 let (icon, icon_color): (&str, u32) = match tab {
-                    TabData::Browser(data) => (data.favicon.as_str(), 0xF8F8F8),
+                    TabData::Browser(data) => (data.favicon.as_str(), 0xFFFFF),
                     TabData::ApiRequest(data) => {
                         let color = match data.method {
                             Method::GET => 0x4ADE80,
@@ -616,23 +625,32 @@ impl AppSidebar {
                     })
                     .when(self.width / 3.0 > 80.0, |el| el.w(gpui::relative(0.31)))
                     .h(px(45.0))
-                    .bg(rgb(0x7A769F))
+                    .bg(bg)
                     .rounded(px(10.0))
                     .cursor_pointer()
                     .flex()
                     .justify_center()
                     .items_center()
-                    .hover(|style| style.bg(rgb(0x565375)))
+                    .hover(move |style| style.bg(hover))
                     .child(
-                        svg()
-                            .path(icon.to_string())
+                        div()
                             .size(px(20.))
-                            .text_color(rgb(icon_color)),
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(super::favicon_element(icon, icon_color)),
                     )
             }))
     }
 
-    fn render_space_selection(&self) -> impl IntoElement {
+    fn render_space_selection(&self, t: &Theme) -> impl IntoElement {
+        let (text, bg, tile, active) = (
+            t.theme_color.text,
+            t.theme_color.background,
+            t.theme_color.tile_bg,
+            t.theme_color.tile_bg_active,
+        );
+
         div()
             .w_full()
             .flex()
@@ -658,7 +676,7 @@ impl AppSidebar {
                     .rounded_full()
                     .w_8()
                     .h_full()
-                    .bg(rgb(0x565375))
+                    .bg(bg)
                     .child("A"),
             )
             // CENTER: space logos
@@ -685,11 +703,7 @@ impl AppSidebar {
                             .rounded(px(6.0))
                             .w_8()
                             .h_full()
-                            .bg(if is_active {
-                                rgb(0x7A769F)
-                            } else {
-                                rgb(0x565375)
-                            })
+                            .bg(if is_active { active } else { tile })
                             .child(s.to_string().to_uppercase())
                     })),
             )
@@ -709,38 +723,42 @@ impl AppSidebar {
                     .rounded_full()
                     .w_8()
                     .h_full()
-                    .bg(rgb(0x565375))
+                    .bg(bg)
                     .child("+"),
             )
     }
 
-    fn render_node(&self, id: &NodeId, depths: usize, cx: &mut App) -> AnyElement {
-        let nodes = &self.entity.read(cx).nodes;
+    fn render_node(
+        &self,
+        space: &SidebarContext,
+        id: &NodeId,
+        depths: usize,
+        t: &Theme,
+    ) -> AnyElement {
+        let Some(node) = space.nodes.get(id) else {
+            return div().into_any_element();
+        };
+        let name = node.name.clone();
 
-        if let Some(node) = nodes.get(id) {
-            let name = node.name.clone();
-            let data = node.data.clone();
-
-            match data {
-                NodeData::Tab { data, open } => self
-                    .render_tab(id, name.as_str(), &data, open, depths)
-                    .into_any_element(),
-                NodeData::Folder { children, expand } => {
-                    let header = self.render_folder(id.clone(), name.as_str(), expand, depths);
-                    div()
-                        .flex()
-                        .flex_col()
-                        .child(header)
-                        .when(expand, |el| {
-                            el.children(
-                                children.iter().map(|c| self.render_node(c, depths + 1, cx)),
-                            )
-                        })
-                        .into_any_element()
-                }
+        match &node.data {
+            NodeData::Tab { data, open } => self
+                .render_tab(id, name.as_str(), data, *open, depths, t)
+                .into_any_element(),
+            NodeData::Folder { children, expand } => {
+                let header = self.render_folder(id.clone(), name.as_str(), *expand, depths, t);
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(header)
+                    .when(*expand, |el| {
+                        el.children(
+                            children
+                                .iter()
+                                .map(|c| self.render_node(space, c, depths + 1, t)),
+                        )
+                    })
+                    .into_any_element()
             }
-        } else {
-            div().into_any_element()
         }
     }
 
@@ -751,45 +769,53 @@ impl AppSidebar {
         data: &TabData,
         open: bool,
         depths: usize,
+        t: &Theme,
     ) -> AnyElement {
         let indent_px = 8.0 + (depths as f32 * 8.0);
-        if let TabData::ApiRequest(tab_data) = data {
-            let favicon = self.request_favicon(tab_data.method.clone());
-            div()
-                .id(SharedString::from(id.to_string()))
-                .h(px(40.))
-                .flex()
-                .flex_row()
-                .items_center()
-                .when(depths == 0, |el| el.pl_2())
-                .when(depths > 0, |el| el.pl_2().ml(px(indent_px)))
-                .gap_2()
-                .rounded(px(10.0))
-                .border_color(rgb(0x565375))
-                .text_base()
-                .cursor_pointer()
-                .when(open, |el| el.bg(rgb(0xD3D3D3)))
-                .hover(|style| style.bg(rgb(0x565375)))
-                .child(
-                    div()
-                        .relative()
-                        .h(px(25.0))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .child(favicon),
-                )
-                .child(
-                    div()
-                        .text_size(px(17.))
-                        .child(name.to_string())
-                        .font_weight(gpui::FontWeight::SEMIBOLD)
-                        .text_color(rgb(0xFFFFFF)),
-                )
-                .into_any_element()
-        } else {
-            div().into_any_element()
-        }
+        let (hover, active, text) = (
+            t.theme_color.tile_bg_hover,
+            t.theme_color.tile_bg_active,
+            t.theme_color.text,
+        );
+
+        let leading: AnyElement = match data {
+            TabData::Browser(b) => div()
+                .size(px(18.))
+                .child(super::favicon_element(&b.favicon, 0xFFFFFF))
+                .into_any_element(),
+            TabData::ApiRequest(a) => self.request_favicon(a.method.clone()).into_any_element(),
+        };
+
+        div()
+            .id(SharedString::from(id.to_string()))
+            .h(px(40.))
+            .flex()
+            .flex_row()
+            .items_center()
+            .when(depths == 0, |el| el.pl_2())
+            .when(depths > 0, |el| el.pl_2().ml(px(indent_px)))
+            .gap_2()
+            .rounded(px(10.))
+            .cursor_pointer()
+            .when(open, move |el| el.bg(active))
+            .hover(move |s| s.bg(hover))
+            .child(
+                div()
+                    .relative()
+                    .h(px(25.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(leading),
+            )
+            .child(
+                div()
+                    .text_size(px(17.))
+                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                    .text_color(text)
+                    .child(name.to_string()),
+            )
+            .into_any_element()
     }
 
     fn request_favicon(&self, method: Method) -> impl IntoElement {
@@ -838,7 +864,14 @@ impl AppSidebar {
         name: &str,
         expand: bool,
         depths: usize,
+        t: &Theme,
     ) -> impl IntoElement {
+        let (text, hover, folder_bg, border) = (
+            t.theme_color.text,
+            t.theme_color.tile_bg_hover,
+            t.theme_color.folder_bg,
+            t.theme_color.border,
+        );
         let indent_px = 8.0 + (depths as f32 * 8.0);
         let node_id_clone = node_id.clone();
         let entity = self.entity.clone();
@@ -854,10 +887,10 @@ impl AppSidebar {
             .when(depths > 0, |el| el.pl_2().ml(px(indent_px)))
             .gap_2()
             .rounded(px(10.0))
-            .border_color(rgb(0x565375))
+            .border_color(border)
             .text_base()
             .cursor_pointer()
-            .hover(|style| style.bg(rgb(0x565375)))
+            .hover(move |style| style.bg(hover))
             .on_click(move |_, _window, cx| {
                 entity.update(cx, |sidebar, cx| {
                     if let Some(node) = sidebar.nodes.get_mut(&node_id_for_click) {
@@ -878,7 +911,8 @@ impl AppSidebar {
                             .when(!expand, |el| el.path("icons/folder-fill.svg"))
                             .when(expand, |el| el.path("icons/folder-open-fill.svg"))
                             .size(px(25.))
-                            .text_color(rgb(0x524C73)),
+                            // svg fill
+                            .text_color(folder_bg),
                     )
                     .child(
                         svg()
@@ -888,7 +922,7 @@ impl AppSidebar {
                             .when(!expand, |el| el.path("icons/folder-outline.svg"))
                             .when(expand, |el| el.path("icons/folder-open-outline.svg"))
                             .size(px(25.))
-                            .text_color(rgb(0x7A769F)),
+                            .text_color(text),
                     ),
             )
             .child(
@@ -896,7 +930,7 @@ impl AppSidebar {
                     .text_size(px(17.))
                     .child(name.to_string())
                     .font_weight(gpui::FontWeight::SEMIBOLD)
-                    .text_color(rgb(0xFFFFFF)),
+                    .text_color(text),
             )
     }
 }

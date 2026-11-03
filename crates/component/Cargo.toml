@@ -1,0 +1,12 @@
+[package]
+name = "component"
+version = "0.1.0"
+publish.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/component.rs"
+
+[dependencies]
+assets.workspace = true
+gpui.workspace = true

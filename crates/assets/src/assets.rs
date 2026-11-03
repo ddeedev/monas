@@ -2,16 +2,33 @@ use anyhow::anyhow;
 use gpui::{App, AssetSource, SharedString};
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
+use std::sync::OnceLock;
+
+const SYSTEM_UI_FONT: &str = ".SystemUIFont";
 
 pub struct FontAsset {
     data: &'static [u8],
     font_name: &'static str,
 }
 
-pub const FONT_SUPPORT: [FontAsset; 1] = [FontAsset {
-    data: include_bytes!("../../../assets/fonts/pacifico/Pacifico-Regular.ttf"),
-    font_name: "Pacifico",
-}];
+pub const FONT_SUPPORT: [FontAsset; 4] = [
+    FontAsset {
+        data: include_bytes!("../../../assets/fonts/Pacifico-Regular.ttf"),
+        font_name: "Pacifico",
+    },
+    FontAsset {
+        data: include_bytes!("../../../assets/fonts/OpenSans-Regular.ttf"),
+        font_name: "Open Sans",
+    },
+    FontAsset {
+        data: include_bytes!("../../../assets/fonts/IBMPlexSans-Regular.ttf"),
+        font_name: "IBM Plex Sans",
+    },
+    FontAsset {
+        data: include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf"),
+        font_name: "JetBrainsMono",
+    },
+];
 
 #[derive(RustEmbed)]
 #[folder = "../../assets"]

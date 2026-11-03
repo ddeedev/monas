@@ -5,5 +5,5 @@ pub mod node;
 pub mod tabs;
 
 pub use browser::space;
-pub use browser::tab::BrowserData;
+pub use browser::tab::{BrowserData, BrowserParams};
 pub use tabs::{Tab, TabData};
