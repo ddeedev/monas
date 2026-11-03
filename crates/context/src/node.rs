@@ -33,6 +33,10 @@ impl NodeData {
     pub fn new_tab_node(data: TabData, open: bool) -> Self {
         Self::Tab { data, open }
     }
+
+    pub fn new_folder_node(children: Vec<NodeId>, expand: bool) -> Self {
+        Self::Folder { children, expand }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,8 +58,15 @@ impl Node {
         }
     }
 
+    pub fn children(&self) -> &[NodeId] {
+        match &self.data {
+            NodeData::Folder { children, .. } => children,
+            NodeData::Tab { .. } => &[],
+        }
+    }
+
     pub fn next_position(&self) -> u8 {
-        (self.list_child_folder().len() + 1) as u8
+        u8::try_from(self.children().len() + 1).unwrap_or(u8::MAX)
     }
 }
 

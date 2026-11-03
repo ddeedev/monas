@@ -1,14 +1,5 @@
-use crate::api::tab::ApiRequestData;
-use http::Method;
+use crate::{TabData, tabs::Tab};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum TabData {
-    Browser(BrowserData),
-    ApiRequest(ApiRequestData),
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BrowserData {
@@ -27,21 +18,26 @@ impl BrowserData {
     }
 }
 
-impl TabData {
-    pub fn new_browser_tab(url: String, favicon: String) -> Self {
-        Self::Browser(BrowserData::new(url, favicon))
-    }
+#[derive(Debug, Clone, Default)]
+pub struct BrowserParams {
+    pub url: String,
+    pub favicon: String,
+}
 
-    pub fn new_api_tab(
-        url: String,
-        method: Method,
-        params: HashMap<String, String>,
-        body: String,
-        auth: String,
-        headers: HashMap<String, String>,
-    ) -> Self {
-        Self::ApiRequest(ApiRequestData::new(
-            url, method, params, body, auth, headers,
-        ))
+impl Tab for BrowserData {
+    type Params = BrowserParams;
+
+    fn new_tab(p: BrowserParams) -> Self {
+        Self {
+            url: p.url,
+            favicon: p.favicon,
+            tab_number: None,
+        }
+    }
+}
+
+impl From<BrowserData> for TabData {
+    fn from(value: BrowserData) -> Self {
+        TabData::Browser(value)
     }
 }

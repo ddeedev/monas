@@ -1,10 +1,7 @@
 use std::vec;
 
 use super::mock;
-use crate::view::{
-    mock::{work_sidebar, work_space},
-    space_content::SpaceContent,
-};
+use crate::view::space_content::SpaceContent;
 use action::{OpenSearchPopup, ResetSidebar, SwitchSpace, ToggleSidebar};
 use context::space::{ProfileId, SidebarContext, SpaceContext};
 use gpui::{
@@ -35,104 +32,72 @@ impl MainContent {
     // TODO::
     // Using db or local space file instead of hardcode
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let mut logos: Vec<String> = Vec::new();
+        let current_space = 1;
 
-        let space_sidebar = SidebarContext::new();
-        let space_sidebar_entity = cx.new(|_| mock::sidebar_context());
-        let space_name: SharedString = "mock".to_string().into();
-        if let Some(logo) = space_name.chars().nth(0) {
-            logos.push(logo.to_string());
-        }
+        let contexts = mock::spaces();
+        let logos: Vec<String> = contexts
+            .iter()
+            .filter_map(|s| s.name.chars().next())
+            .map(|c| c.to_string())
+            .collect();
 
-        let space_ctx = SpaceContext {
-            id: context::space::SpaceId(1.to_string()),
-            number: 1,
-            profile: ProfileId::new(),
-            name: space_name.to_string(),
-            sidebar: space_sidebar,
-        };
+        let spaces: Vec<SpaceContent> = contexts
+            .into_iter()
+            .map(|ctx| Self::build_space(cx, ctx))
+            .collect();
 
-        let search_input = cx.new(|cx| TextInput::new("Search…", cx));
-        let sidebar = cx.new(|_cx| {
-            SidebarView::new(
-                space_name.clone(),
-                space_ctx.number,
-                space_sidebar_entity,
-                search_input,
-            )
-        });
-
-        let space = cx.new(|_| space_ctx);
-        let popup_text = cx.new(|cx| TextInput::new("", cx));
-        let default_space = SpaceContent {
-            space,
-            sidebar,
-            popup_search: cx.new(|cx| Popup::new(popup_text, vec![], cx)),
-        };
-
-        let work_space = work_space();
-        if let Some(logo) = work_space.name.chars().nth(0) {
-            logos.push(logo.to_string());
-        }
-
-        let work_sidebar = work_sidebar();
-        let sidebar_ctx = cx.new(|_| work_sidebar);
-
-        cx.observe(&sidebar_ctx, |_this, _sidebar, cx| cx.notify())
-            .detach();
-
-        let search_input = cx.new(|cx| TextInput::new("Search…", cx));
-        let sidebar_view = SidebarView::new(
-            work_space.name.clone().into(),
-            work_space.number,
-            sidebar_ctx,
-            search_input,
-        );
-
-        let work_space_entity = cx.new(|_| work_space);
-        cx.observe(&work_space_entity, |_this, _sidebar, cx| cx.notify())
-            .detach();
-
-        let popup_text = cx.new(|cx| TextInput::new("", cx));
-        let space_popup = cx.new(|cx| Popup::new(popup_text, vec![], cx));
-        let space_content =
-            SpaceContent::new(work_space_entity, cx.new(|_| sidebar_view), space_popup);
-
-        for space in [&default_space, &space_content] {
+        for space in &spaces {
             space.sidebar.update(cx, |sidebar, sb_cx| {
                 sidebar.register_logos(sb_cx, logos.clone());
-                sidebar.set_active_space(sb_cx, 1);
+                sidebar.set_active_space(sb_cx, current_space);
             });
         }
 
-        for space in [&default_space, &space_content] {
-            cx.subscribe(
-                &space.popup_search,
-                |this, popup, event: &PopupEvent, cx| {
-                    match event {
-                        PopupEvent::Dismiss => {}
-                        PopupEvent::Open(data) => {
-                            // TODO: switch to the tab for `data`
-                        }
-                        PopupEvent::Search(text) => {
-                            // TODO: run a search / navigate with `text`
-                        }
-                    }
-                    popup.update(cx, |p, cx| p.close(cx));
-                    this.focused = false;
-                    cx.notify();
-                },
-            )
-            .detach();
-        }
-
         Self {
-            current_space: 1,
-            spaces: vec![default_space.clone(), space_content.clone()],
+            current_space,
+            spaces,
             focus_handle: cx.focus_handle(),
             space_logos: logos,
             focused: false,
         }
+    }
+
+    fn build_space(cx: &mut Context<Self>, mut ctx: SpaceContext) -> SpaceContent {
+        let name: SharedString = ctx.name.clone().into();
+        let number = ctx.number;
+
+        // The sidebar data lives in one place: the entity. If SidebarContext is Clone,
+        // you can use `ctx.sidebar.clone()` instead of replacing it.
+        let sidebar_ctx = std::mem::replace(&mut ctx.sidebar, SidebarContext::new());
+        let sidebar_entity = cx.new(|_| sidebar_ctx);
+        cx.observe(&sidebar_entity, |_, _, cx| cx.notify()).detach();
+
+        let search_input = cx.new(|cx| TextInput::new("Search…", cx));
+        let sidebar = cx.new(|_| SidebarView::new(name, number, sidebar_entity, search_input));
+
+        let space = cx.new(|_| ctx);
+        cx.observe(&space, |_, _, cx| cx.notify()).detach();
+
+        let popup_text = cx.new(|cx| TextInput::new("", cx));
+        let popup = cx.new(|cx| Popup::new(popup_text, vec![], cx));
+
+        cx.subscribe(&popup, |this, popup, event: &PopupEvent, cx| {
+            match event {
+                PopupEvent::Dismiss => {}
+                PopupEvent::Open(_data) => {
+                    // TODO: switch to the tab for `_data`
+                }
+                PopupEvent::Search(_text) => {
+                    // TODO: run a search / navigate with `_text`
+                }
+            }
+            popup.update(cx, |p, cx| p.close(cx));
+            this.focused = false;
+            cx.notify();
+        })
+        .detach();
+
+        SpaceContent::new(space, sidebar, popup)
     }
 
     fn sync_sidebars(&self, cx: &mut Context<Self>) {

@@ -1,4 +1,4 @@
-use crate::TabData;
+use crate::{Tab, TabData};
 use http::Method;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
@@ -57,5 +57,36 @@ impl ApiRequestData {
             method,
             tab_number: None,
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ApiRequestParams {
+    pub url: String,
+    pub method: Method,
+    pub params: HashMap<String, String>,
+    pub body: String,
+    pub auth: String,
+    pub headers: HashMap<String, String>,
+}
+
+impl Tab for ApiRequestData {
+    type Params = ApiRequestParams;
+
+    fn new_tab(params: Self::Params) -> Self {
+        ApiRequestData::new(
+            params.url,
+            params.method,
+            params.params,
+            params.body,
+            params.auth,
+            params.headers,
+        )
+    }
+}
+
+impl From<ApiRequestData> for TabData {
+    fn from(value: ApiRequestData) -> Self {
+        TabData::ApiRequest(value)
     }
 }
