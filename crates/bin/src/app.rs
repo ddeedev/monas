@@ -2,12 +2,12 @@ use crate::menu::init_app_menu;
 use crate::view::main_content::MainContent;
 use action::Quit;
 use assets::{Assets, load_fonts_asset};
+use component::theme;
 use gpui::{
     App, Application, TitlebarOptions, WindowBackgroundAppearance, WindowKind, WindowOptions,
     point, prelude::*, px,
 };
 use ui::search::popup;
-use ui::theme;
 
 fn build_application() -> Application {
     let platform = gpui_platform::current_platform(false);

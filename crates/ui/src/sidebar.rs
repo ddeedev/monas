@@ -438,10 +438,10 @@ impl RenderOnce for AppSidebar {
             .w(px(self.width))
             .flex_shrink_0()
             .h_full()
-            .bg(theme.sidebar_bg)
+            .bg(theme.theme_color.background)
             .font_family(theme.font_family.clone())
             .text_size(theme.font_size)
-            .text_color(theme.text)
+            .text_color(theme.theme_color.text)
             .flex()
             .flex_col()
             .child(header)
@@ -475,7 +475,7 @@ impl AppSidebar {
         on_toggle: Option<ToggleHadler>,
         t: &Theme,
     ) -> impl IntoElement {
-        let hover = t.tile_bg;
+        let hover = t.theme_color.tile_bg;
         let mut toggle_btn = div()
             .id("sidebar-toggle")
             .w(px(30.0))
@@ -547,7 +547,11 @@ impl AppSidebar {
     }
 
     fn render_workspace_card(&self, workspace_name: &str, t: &Theme) -> impl IntoElement {
-        let (text, bg, tile) = (t.text, t.sidebar_bg, t.tile_bg);
+        let (text, bg, tile) = (
+            t.theme_color.text,
+            t.theme_color.background,
+            t.theme_color.tile_bg,
+        );
         div()
             .flex()
             .flex_row()
@@ -594,7 +598,11 @@ impl AppSidebar {
     }
 
     fn render_favorite_tap(&self, tabs: Vec<&TabData>, t: &Theme) -> impl IntoElement {
-        let (bg, hover, text) = (t.tile_bg, t.tile_bg_hover, t.text);
+        let (bg, hover, text) = (
+            t.theme_color.tile_bg,
+            t.theme_color.tile_bg_hover,
+            t.theme_color.text,
+        );
         div()
             .w_full()
             .flex()
@@ -649,6 +657,12 @@ impl AppSidebar {
     }
 
     fn render_space_selection(&self, t: &Theme) -> impl IntoElement {
+        let (text, bg, tile) = (
+            t.theme_color.text,
+            t.theme_color.background,
+            t.theme_color.tile_bg,
+        );
+
         div()
             .w_full()
             .flex()
@@ -674,7 +688,7 @@ impl AppSidebar {
                     .rounded_full()
                     .w_8()
                     .h_full()
-                    .bg(rgb(0x565375))
+                    .bg(text)
                     .child("A"),
             )
             // CENTER: space logos
@@ -774,7 +788,11 @@ impl AppSidebar {
         t: &Theme,
     ) -> AnyElement {
         let indent_px = 8.0 + (depths as f32 * 8.0);
-        let (hover, active, text) = (t.tile_bg_hover, t.tile_bg_active, t.text);
+        let (hover, active, text) = (
+            t.theme_color.tile_bg_hover,
+            t.theme_color.tile_bg_active,
+            t.theme_color.text,
+        );
 
         let leading: AnyElement = match data {
             TabData::Browser(b) => div()
@@ -864,7 +882,11 @@ impl AppSidebar {
         depths: usize,
         t: &Theme,
     ) -> impl IntoElement {
-        let (hover, active, text) = (t.tile_bg_hover, t.tile_bg_active, t.text);
+        let (hover, active, text) = (
+            t.theme_color.tile_bg_hover,
+            t.theme_color.tile_bg_active,
+            t.theme_color.text,
+        );
         let indent_px = 8.0 + (depths as f32 * 8.0);
         let node_id_clone = node_id.clone();
         let entity = self.entity.clone();

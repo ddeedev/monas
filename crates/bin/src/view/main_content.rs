@@ -175,18 +175,15 @@ impl Render for MainContent {
         // popup
         let current_popup = self.current_search();
 
-        let theme = {
-            let this = &cx.theme();
-            *this
-        };
+        let theme = cx.theme().clone();
 
         div()
             .key_context("main_view")
             .track_focus(&self.focus_handle)
             .font_family(theme.font_family.clone())
             .text_size(theme.font_size)
-            .text_color(theme.text)
-            .bg(theme.sidebar_bg)
+            .text_color(theme.theme_color.text)
+            .bg(theme.theme_color.background)
             .on_action(cx.listener(|this, _: &ToggleSidebar, _window, cx| {
                 this.current_sidebar()
                     .update(cx, |sidebar, sb_cx| sidebar.toggle(sb_cx));
@@ -225,13 +222,19 @@ impl Render for MainContent {
                     .justify_center()
                     .items_center()
                     .text_xl()
-                    .text_color(rgb(0xffffff))
+                    .text_color(theme.theme_color.text)
                     .on_mouse_move(cx.listener(|this, _: &gpui::MouseMoveEvent, _window, cx| {
                         this.current_sidebar()
                             .update(cx, |sidebar, cx| sidebar.set_floating_visible(false, cx));
                     })),
             )
             // request UI
+            .child(
+                div()
+                    .text_color(rgb(0xFFFFFF))
+                    .text_size(px(20.))
+                    .child("hello"),
+            )
             .child(div().absolute().size_full().child(current_popup))
     }
 }

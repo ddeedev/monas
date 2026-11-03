@@ -1,9 +1,8 @@
 pub mod platform;
 pub mod search;
 pub mod sidebar;
-pub mod theme;
 
-pub use theme::{ActiveTheme, Theme};
+pub use component::theme::{ActiveTheme, Theme};
 
 use gpui::{AnyElement, IntoElement, ObjectFit, img, prelude::*, px, rgb, svg};
 

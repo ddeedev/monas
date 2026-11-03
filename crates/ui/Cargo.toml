@@ -9,6 +9,7 @@ path = "src/ui.rs"
 
 [dependencies]
 gpui.workspace = true
+component.workspace = true
 context.workspace = true
 http.workspace = true
 action.workspace = true

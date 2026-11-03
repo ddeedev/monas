@@ -14,5 +14,6 @@ gpui_platform.workspace = true
 http.workspace = true
 context.workspace = true
 ui.workspace = true
+component.workspace = true
 serde.workspace = true
 reqwest_client.workspace = true
