@@ -55,7 +55,8 @@ impl Popup {
     pub fn open(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.visible = true;
         self.selected = 0;
-        window.focus(&self.input.read(cx).focus_handle);
+        let focus_handle = self.input.read(cx).focus_handle.clone();
+        window.focus(&focus_handle, cx);
         cx.notify();
     }
 
@@ -70,8 +71,8 @@ impl Popup {
             cx.notify();
         })
         .detach();
-
-        window.focus(&self.input.read(cx).focus_handle);
+        let focus_handle = self.input.read(cx).focus_handle.clone();
+        window.focus(&focus_handle, cx);
     }
 
     fn filtered(&self, cx: &App) -> Vec<BrowserData> {

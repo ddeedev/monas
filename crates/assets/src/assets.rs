@@ -8,10 +8,16 @@ pub struct FontAsset {
     font_name: &'static str,
 }
 
-pub const FONT_SUPPORT: [FontAsset; 1] = [FontAsset {
-    data: include_bytes!("../../../assets/fonts/pacifico/Pacifico-Regular.ttf"),
-    font_name: "Pacifico",
-}];
+pub const FONT_SUPPORT: [FontAsset; 2] = [
+    FontAsset {
+        data: include_bytes!("../../../assets/fonts/pacifico/Pacifico-Regular.ttf"),
+        font_name: "Pacifico",
+    },
+    FontAsset {
+        data: include_bytes!("../../../assets/fonts/open-sans/OpenSans-Regular.ttf"),
+        font_name: "OpenSans",
+    },
+];
 
 #[derive(RustEmbed)]
 #[folder = "../../assets"]

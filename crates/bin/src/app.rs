@@ -6,24 +6,31 @@ use gpui::{
     App, Application, TitlebarOptions, WindowBackgroundAppearance, WindowKind, WindowOptions,
     point, prelude::*, px,
 };
-use gpui_component::{Root, theme};
 use ui::search::popup;
+use ui::theme;
+
+fn build_application() -> Application {
+    let platform = gpui_platform::current_platform(false);
+    Application::new_inaccessible(platform).with_http_client(std::sync::Arc::new(
+        reqwest_client::ReqwestClient::user_agent("monas/0.1").unwrap(),
+    ))
+}
 
 pub struct AppRunner;
 
 impl AppRunner {
     pub fn run() {
-        Application::new().with_assets(Assets).run(|cx: &mut App| {
+        build_application().with_assets(Assets).run(|cx: &mut App| {
             // load asset
             load_fonts_asset(cx);
+            theme::init(cx);
             action::register_keybind(cx);
             text_input::TextInput::bind_keys(cx);
             popup::Popup::bind_keys(cx);
             init_app_menu(cx);
 
-            theme::init(cx);
             cx.on_action(|_: &Quit, cx| cx.quit());
-            cx.on_window_closed(|cx| {
+            cx.on_window_closed(|cx, _window| {
                 if cx.windows().is_empty() {
                     cx.quit();
                 }
@@ -42,11 +49,8 @@ impl AppRunner {
                 ..Default::default()
             };
 
-            cx.open_window(window_option, |window, cx| {
-                let main_content = cx.new(MainContent::new);
-                cx.new(|cx| Root::new(main_content, window, cx))
-            })
-            .unwrap();
+            cx.open_window(window_option, |_window, cx| cx.new(MainContent::new))
+                .unwrap();
             cx.activate(true);
         });
     }

@@ -23,8 +23,10 @@ context = { path = "crates/context" }
 settings = { path = "crates/settings" }
 text-input = { path = "crates/text_input" }
 anyhow = "1.0.102"
-gpui = "0.2.2"
-gpui-component = "0.5.1"
+gpui = {version = "0.2.2", git = "https://github.com/zed-industries/zed"}
+gpui_platform = { version = "0.1.0", git = "https://github.com/zed-industries/zed"}
+reqwest_client = { git = "https://github.com/zed-industries/zed" }
+http_client = { git = "https://github.com/zed-industries/zed" }
 rust-embed = { version = "8.11.0", features = ["debug-embed"] }
 serde = { version = "1.0.229", features = ["serde_derive"] }
 uuid = { version = "1.25.0", features = ["v4"] }

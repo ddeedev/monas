@@ -10,6 +10,7 @@ use gpui::{
 };
 use text_input::{Submit, TextInput};
 use ui::{
+    ActiveTheme,
     search::popup::{Popup, PopupEvent},
     sidebar::{SidebarEvent, SidebarView},
 };
@@ -163,7 +164,7 @@ impl Focusable for MainContent {
 impl Render for MainContent {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if !self.focused {
-            window.focus(&self.focus_handle);
+            window.focus(&self.focus_handle, cx);
             self.focused = true;
         }
 
@@ -174,9 +175,18 @@ impl Render for MainContent {
         // popup
         let current_popup = self.current_search();
 
+        let theme = {
+            let this = &cx.theme();
+            *this
+        };
+
         div()
             .key_context("main_view")
             .track_focus(&self.focus_handle)
+            .font_family(theme.font_family.clone())
+            .text_size(theme.font_size)
+            .text_color(theme.text)
+            .bg(theme.sidebar_bg)
             .on_action(cx.listener(|this, _: &ToggleSidebar, _window, cx| {
                 this.current_sidebar()
                     .update(cx, |sidebar, sb_cx| sidebar.toggle(sb_cx));

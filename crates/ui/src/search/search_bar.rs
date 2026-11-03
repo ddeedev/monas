@@ -56,7 +56,7 @@ impl RenderOnce for SearchBar {
             .text_color(rgb(0xF8F8F8))
             .cursor_text()
             .on_mouse_down(MouseButton::Left, move |_, window, _cx| {
-                window.focus(&focus_handle); // newer gpui: window.focus(&focus_handle, _cx)
+                window.focus(&focus_handle, _cx);
             })
             //.child(
             //    svg()

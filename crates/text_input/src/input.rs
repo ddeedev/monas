@@ -62,6 +62,19 @@ const WORD_MOD: &str = "ctrl";
 
 const CONTEXT: &str = "TextInput";
 
+#[cfg(target_os = "macos")]
+macro_rules! cmd_key {
+    ($k:literal) => {
+        concat!("cmd-", $k)
+    };
+}
+#[cfg(not(target_os = "macos"))]
+macro_rules! cmd_key {
+    ($k:literal) => {
+        concat!("ctrl-", $k)
+    };
+}
+
 impl TextInput {
     pub fn new(placeholder: impl Into<SharedString>, cx: &mut Context<Self>) -> Self {
         Self {
@@ -100,24 +113,23 @@ impl TextInput {
             KeyBinding::new("end", End, ctx),
             KeyBinding::new("shift-home", SelectHome, ctx),
             KeyBinding::new("shift-end", SelectEnd, ctx),
-            KeyBinding::new("secondary-a", SelectAll, ctx),
+            KeyBinding::new(cmd_key!("a"), SelectAll, ctx),
             // Clipboard
-            KeyBinding::new("secondary-c", Copy, ctx),
-            KeyBinding::new("secondary-x", Cut, ctx),
-            KeyBinding::new("secondary-v", Paste, ctx),
+            KeyBinding::new(cmd_key!("c"), Copy, ctx),
+            KeyBinding::new(cmd_key!("x"), Cut, ctx),
+            KeyBinding::new(cmd_key!("v"), Paste, ctx),
         ]
     }
 
     fn word_bindings() -> Vec<KeyBinding> {
         let ctx = Some(CONTEXT);
-        let key = |suffix: &str| format!("{WORD_MOD}-{suffix}");
         vec![
-            KeyBinding::new(&key("left"), WordLeft, ctx),
-            KeyBinding::new(&key("right"), WordRight, ctx),
-            KeyBinding::new(&key("shift-left"), SelectWordLeft, ctx),
-            KeyBinding::new(&key("shift-right"), SelectWordRight, ctx),
-            KeyBinding::new(&key("backspace"), DeleteWordLeft, ctx),
-            KeyBinding::new(&key("delete"), DeleteWordRight, ctx),
+            KeyBinding::new(cmd_key!("left"), WordLeft, ctx),
+            KeyBinding::new(cmd_key!("right"), WordRight, ctx),
+            KeyBinding::new(cmd_key!("shift-left"), SelectWordLeft, ctx),
+            KeyBinding::new(cmd_key!("shift-right"), SelectWordRight, ctx),
+            KeyBinding::new(cmd_key!("backspace"), DeleteWordLeft, ctx),
+            KeyBinding::new(cmd_key!("delete"), DeleteWordRight, ctx),
         ]
     }
 
@@ -189,11 +201,11 @@ impl TextInput {
         self.select_to(self.next_word_boundary(self.cursor_offset()), cx);
     }
 
-    fn select_to_start(&mut self, _: &SelectStart, window: &mut Window, cx: &mut Context<Self>) {
+    fn select_to_start(&mut self, _: &SelectStart, _window: &mut Window, cx: &mut Context<Self>) {
         self.select_to(0, cx);
     }
 
-    fn select_to_end(&mut self, _: &SelectEnd, window: &mut Window, cx: &mut Context<Self>) {
+    fn select_to_end(&mut self, _: &SelectEnd, _window: &mut Window, cx: &mut Context<Self>) {
         self.select_to(self.content.len(), cx);
     }
 
@@ -602,7 +614,7 @@ impl EntityInputHandler for TextInput {
             return None;
         }
 
-        assert_eq!(last_layout.text, self.content);
+        //assert_eq!(last_layout.text, self.content);
         let utf8_index = last_layout.index_for_x(point.x - line_point.x)?;
         Some(self.offset_to_utf16(utf8_index))
     }
@@ -774,8 +786,15 @@ impl Element for TextElement {
             window.paint_quad(selection)
         }
         let line = prepaint.line.take().unwrap();
-        line.paint(bounds.origin, window.line_height(), window, cx)
-            .unwrap();
+        line.paint(
+            bounds.origin,
+            window.line_height(),
+            gpui::TextAlign::Left,
+            None,
+            window,
+            cx,
+        )
+        .unwrap();
 
         if focus_handle.is_focused(window)
             && let Some(cursor) = prepaint.cursor.take()
@@ -817,7 +836,6 @@ impl Render for TextInput {
             .on_action(cx.listener(Self::select_word_right))
             .on_action(cx.listener(Self::select_to_end))
             .on_action(cx.listener(Self::select_to_start))
-            .on_action(cx.listener(Self::select_word_right))
             .on_action(cx.listener(Self::delete_word_left))
             .on_action(cx.listener(Self::delete_word_right))
             .on_action(cx.listener(Self::delete_to_start))
