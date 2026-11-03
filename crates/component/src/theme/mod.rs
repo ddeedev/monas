@@ -8,6 +8,9 @@ pub struct Theme {
     // font
     pub font_family: SharedString,
     pub font_size: Pixels,
+    pub space_name_font: SharedString,
+    pub folder_font: SharedString,
+    pub folder_font_size: Pixels,
 
     pub theme_color: ThemeColor,
 }
@@ -17,6 +20,9 @@ impl Theme {
         Self {
             font_family: "IBM Plex Sans".into(),
             font_size: px(14.),
+            space_name_font: "Pacifico".into(),
+            folder_font: "IBM Plex Sans".into(),
+            folder_font_size: px(12.),
             theme_color: ThemeColor {
                 background: rgb(0x636080),
                 border: rgb(0x565375),
@@ -50,13 +56,18 @@ impl Theme {
                 searchbar_text: rgb(0xF8F8F8),
                 searchbar_active: rgb(0x3311ff30),
                 searchbar_hover: rgb(0x7A769F),
+
+                sidebar_outline: rgb(0xF8F8F8),
             },
         }
     }
     pub fn pink() -> Self {
         Self {
-            font_family: "IBM Plex Sans".into(),
+            font_family: "JetBrainsMono".into(),
             font_size: px(14.),
+            space_name_font: "Pacifico".into(),
+            folder_font: "JetBrainsMono".into(),
+            folder_font_size: px(12.),
             theme_color: ThemeColor {
                 // base
                 background: rgb(0xF4B6CF),
@@ -96,6 +107,8 @@ impl Theme {
                 searchbar_text: rgb(0x4A1F36),
                 searchbar_active: rgba(0xE6458A40),
                 searchbar_hover: rgb(0xF7C4D8),
+
+                sidebar_outline: rgb(0x000000),
             },
         }
     }

@@ -202,7 +202,7 @@ impl Render for MainContent {
             .flex()
             .flex_row()
             .size_full()
-            .bg(rgb(0x636080))
+            .bg(theme.theme_color.background)
             .child(current_sidebar)
             .child(
                 div()
@@ -212,10 +212,11 @@ impl Render for MainContent {
                     .m_2()
                     .ml(px(8.0 * (1.0 - sidebar_fraction)))
                     // 2. The styling for the card stroke containe
-                    .bg(rgb(0x7A769F))
+                    .bg(theme.theme_color.tile_bg)
+                    //.bg(theme.theme_color.tile_bg)
                     .rounded(px(12.0))
                     .border_1()
-                    .border_color(rgb(0x565375))
+                    .border_color(theme.theme_color.border)
                     // Layout and inner children styling
                     .p_4()
                     .gap_3()
@@ -229,12 +230,6 @@ impl Render for MainContent {
                     })),
             )
             // request UI
-            .child(
-                div()
-                    .text_color(rgb(0xFFFFFF))
-                    .text_size(px(20.))
-                    .child("hello"),
-            )
             .child(div().absolute().size_full().child(current_popup))
     }
 }

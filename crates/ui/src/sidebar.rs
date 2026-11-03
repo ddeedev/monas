@@ -233,6 +233,10 @@ impl Render for SidebarView {
             view.update(cx, |_, cx| cx.emit(SidebarEvent::Search(q.clone())));
         });
 
+        let theme = cx.theme().clone();
+
+        let (tile) = (theme.theme_color.tile_bg_active);
+
         div()
             .h_full()
             .flex_shrink_0()
@@ -285,7 +289,7 @@ impl Render for SidebarView {
                         .w(px(3.0))
                         .h_full()
                         .cursor_col_resize()
-                        .hover(move |s| s.bg(rgb(0x827e7e)))
+                        .hover(move |s| s.bg(tile))
                         .on_drag(SidebarResizeDrag, |_, _, _, cx| {
                             cx.new(|_| SidebarResizeDrag)
                         }),
@@ -455,14 +459,19 @@ impl RenderOnce for AppSidebar {
                     .gap_2()
                     // TODO: REPLACE WITH SEARCH
                     .child(search)
-                    .child(self.render_favorite_tap(fav_tabs, &theme))
+                    .child(self.render_essential(fav_tabs, &theme))
                     .child(self.render_workspace_card(space_name.as_str(), &theme))
                     .child(
-                        div().gap_2().flex_1().children(
-                            folder
-                                .iter()
-                                .map(|f| self.render_node(&space, f, 0, &theme)),
-                        ),
+                        div()
+                            .text_size(theme.folder_font_size)
+                            .font_family(theme.folder_font.clone())
+                            .gap_2()
+                            .flex_1()
+                            .children(
+                                folder
+                                    .iter()
+                                    .map(|f| self.render_node(&space, f, 0, &theme)),
+                            ),
                     )
                     .child(self.render_space_selection(&theme)),
             )
@@ -475,7 +484,7 @@ impl AppSidebar {
         on_toggle: Option<ToggleHadler>,
         t: &Theme,
     ) -> impl IntoElement {
-        let hover = t.theme_color.tile_bg;
+        let (hover, outline) = (t.theme_color.tile_bg, t.theme_color.sidebar_outline);
         let mut toggle_btn = div()
             .id("sidebar-toggle")
             .w(px(30.0))
@@ -491,7 +500,7 @@ impl AppSidebar {
                     .path("icons/sidebar-left.svg")
                     .w(px(18.0))
                     .h(px(16.0))
-                    .text_color(rgb(0xF8F8F8))
+                    .text_color(outline)
                     .opacity(0.5),
             );
 
@@ -547,10 +556,11 @@ impl AppSidebar {
     }
 
     fn render_workspace_card(&self, workspace_name: &str, t: &Theme) -> impl IntoElement {
-        let (text, bg, tile) = (
+        let (text, bg, tile, space_name_font) = (
             t.theme_color.text,
             t.theme_color.background,
             t.theme_color.tile_bg,
+            t.space_name_font.clone(),
         );
         div()
             .flex()
@@ -565,7 +575,7 @@ impl AppSidebar {
             .text_center()
             .text_color(text)
             .opacity(0.5)
-            .font_family("Pacifico")
+            .font_family(space_name_font)
             .child(div().child("⭐"))
             .child(
                 div()
@@ -574,30 +584,7 @@ impl AppSidebar {
             )
     }
 
-    fn render_search_bar(&self, workspace_name: &str) -> impl IntoElement {
-        div()
-            .flex()
-            .flex_row()
-            .items_center()
-            .justify_center()
-            .gap_2()
-            .bg(rgb(0x7A769F))
-            .rounded(px(6.0))
-            .border_color(rgb(0x565375))
-            .text_xl()
-            .text_center()
-            .text_color(rgb(0xF8F8F8))
-            .opacity(0.5)
-            .font_family("Pacifico")
-            .child(div().child("⭐"))
-            .child(
-                div()
-                    .child(workspace_name.to_string())
-                    .font_weight(gpui::FontWeight::EXTRA_BOLD),
-            )
-    }
-
-    fn render_favorite_tap(&self, tabs: Vec<&TabData>, t: &Theme) -> impl IntoElement {
+    fn render_essential(&self, tabs: Vec<&TabData>, t: &Theme) -> impl IntoElement {
         let (bg, hover, text) = (
             t.theme_color.tile_bg,
             t.theme_color.tile_bg_hover,
@@ -657,10 +644,11 @@ impl AppSidebar {
     }
 
     fn render_space_selection(&self, t: &Theme) -> impl IntoElement {
-        let (text, bg, tile) = (
+        let (text, bg, tile, active) = (
             t.theme_color.text,
             t.theme_color.background,
             t.theme_color.tile_bg,
+            t.theme_color.tile_bg_active,
         );
 
         div()
@@ -688,7 +676,7 @@ impl AppSidebar {
                     .rounded_full()
                     .w_8()
                     .h_full()
-                    .bg(text)
+                    .bg(bg)
                     .child("A"),
             )
             // CENTER: space logos
@@ -715,11 +703,7 @@ impl AppSidebar {
                             .rounded(px(6.0))
                             .w_8()
                             .h_full()
-                            .bg(if is_active {
-                                rgb(0x7A769F)
-                            } else {
-                                rgb(0x565375)
-                            })
+                            .bg(if is_active { active } else { tile })
                             .child(s.to_string().to_uppercase())
                     })),
             )
@@ -739,7 +723,7 @@ impl AppSidebar {
                     .rounded_full()
                     .w_8()
                     .h_full()
-                    .bg(rgb(0x565375))
+                    .bg(bg)
                     .child("+"),
             )
     }
@@ -882,10 +866,11 @@ impl AppSidebar {
         depths: usize,
         t: &Theme,
     ) -> impl IntoElement {
-        let (text, hover, folder_bg) = (
+        let (text, hover, folder_bg, border) = (
             t.theme_color.text,
             t.theme_color.tile_bg_hover,
             t.theme_color.folder_bg,
+            t.theme_color.border,
         );
         let indent_px = 8.0 + (depths as f32 * 8.0);
         let node_id_clone = node_id.clone();
@@ -902,7 +887,7 @@ impl AppSidebar {
             .when(depths > 0, |el| el.pl_2().ml(px(indent_px)))
             .gap_2()
             .rounded(px(10.0))
-            .border_color(rgb(0x565375))
+            .border_color(border)
             .text_base()
             .cursor_pointer()
             .hover(move |style| style.bg(hover))
