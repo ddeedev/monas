@@ -55,11 +55,6 @@ pub struct TextInput {
     pub is_selecting: bool,
 }
 
-#[cfg(target_os = "macos")]
-const WORD_MOD: &str = "alt";
-#[cfg(not(target_os = "macos"))]
-const WORD_MOD: &str = "ctrl";
-
 const CONTEXT: &str = "TextInput";
 
 #[cfg(target_os = "macos")]
@@ -68,17 +63,17 @@ macro_rules! cmd_key {
         concat!("cmd-", $k)
     };
 }
+#[cfg(not(target_os = "macos"))]
+macro_rules! cmd_key {
+    ($k:literal) => {
+        concat!("ctrl-", $k)
+    };
+}
 
 #[cfg(target_os = "macos")]
 macro_rules! option_key {
     ($k:literal) => {
         concat!("alt-", $k)
-    };
-}
-#[cfg(not(target_os = "macos"))]
-macro_rules! cmd_key {
-    ($k:literal) => {
-        concat!("ctrl-", $k)
     };
 }
 

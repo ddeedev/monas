@@ -235,7 +235,7 @@ impl Render for SidebarView {
 
         let theme = cx.theme().clone();
 
-        let (tile) = (theme.theme_color.tile_bg_active);
+        let (tile,) = (theme.theme_color.tile_bg_active,);
 
         div()
             .h_full()
@@ -644,8 +644,7 @@ impl AppSidebar {
     }
 
     fn render_space_selection(&self, t: &Theme) -> impl IntoElement {
-        let (text, bg, tile, active) = (
-            t.theme_color.text,
+        let (bg, tile, active) = (
             t.theme_color.background,
             t.theme_color.tile_bg,
             t.theme_color.tile_bg_active,

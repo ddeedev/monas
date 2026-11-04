@@ -3,16 +3,15 @@ use std::vec;
 use super::mock;
 use crate::view::space_content::SpaceContent;
 use action::{OpenSearchPopup, ResetSidebar, SwitchSpace, ToggleSidebar};
-use context::space::{ProfileId, SidebarContext, SpaceContext};
+use context::space::{SidebarContext, SpaceContext};
 use gpui::{
-    App, Context, Entity, FocusHandle, Focusable, Global, SharedString, Window, deferred, div,
-    prelude::*, px, rgb,
+    App, Context, Entity, FocusHandle, Focusable, Global, SharedString, Window, div, prelude::*, px,
 };
-use text_input::{Submit, TextInput};
+use text_input::TextInput;
 use ui::{
     ActiveTheme,
     search::popup::{Popup, PopupEvent},
-    sidebar::{SidebarEvent, SidebarView},
+    sidebar::SidebarView,
 };
 
 impl Global for MainContent {}

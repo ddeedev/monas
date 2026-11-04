@@ -78,24 +78,8 @@ impl RenderOnce for SearchBar {
         if let Some(on_search) = self.on_search {
             let (input, f) = (self.input.clone(), on_search.clone());
             root = root.on_action(move |_: &Submit, window, cx| submit(&input, &f, window, cx));
-
-            let (input, f) = (self.input.clone(), on_search);
-            root = root.child(
-                div()
-                    .id("search-submit")
-                    .flex_shrink_0()
-                    .px(px(12.0))
-                    .py(px(5.0))
-                    .rounded(px(6.0))
-                    .cursor_pointer()
-                    .bg(theme.theme_color.button_bg)
-                    .hover(move |s| s.bg(theme.theme_color.button_hover))
-                    .text_xs()
-                    .font_weight(gpui::FontWeight::SEMIBOLD)
-                    .child("Search")
-                    .on_click(move |_, window, cx| submit(&input, &f, window, cx)),
-            );
         }
+
         root
     }
 }
