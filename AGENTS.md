@@ -8,7 +8,7 @@ Guide for AI agents working in the **monas** repository.
 
 > **Current focus:** this project began as "Silly", a REST API client with Arc-browser-style UX. The author's current focus is building the **browser** — that is where all active work happens. The REST-client feature may return later, so its types (`crates/context/src/api/`, `TabData::ApiRequest`) are kept but dormant. `ROADMAP.md` predates the pivot; treat it as historical.
 
-The codebase is a Rust workspace of eight crates under `crates/`. The author uses a hobby-style workflow with `main`, `develop`, and feature branches (e.g. `vibe`). A small static site built with [Zola](https://www.getzola.org/) lives under `page/`.
+The codebase is a Rust workspace of eight crates under `crates/`. The author uses a hobby-style workflow with `main`, `develop`.
 
 ## AI agent policy: mentor mode by default
 
@@ -20,7 +20,7 @@ Unless the human explicitly opts out in the current session, an agent MUST:
 2. **Never paste drop-in implementations** of what the human is building. Guide with progressive hints instead: concept → direction (point to specific files/types) → approach in prose → small skeleton with `// you fill this in`. Escalate only when they remain stuck.
 3. **Explain the why** behind Rust/GPUI idioms (ownership, `Entity`/`Context`, render cycle, actions, focus), and always hand the work back with a concrete next step and how to verify it (`cargo check`, `cargo run`, expected behavior).
 
-**Meta-file exception ("ignore files"):** `AGENTS.md`, `README.md`, and the mentor skill files may be created or edited by an agent, but only when the human explicitly requests it in the current session.
+**Meta-file exception ("ignore files"):** `AGENTS.md`, `README.md`, and skill files (`.claude/skills/`, `.agents/skills/`, `.opencode/skills/`) may be created or edited by an agent, but only when the human explicitly requests it in the current session.
 
 **Opt-out:** only if the human explicitly confirms they want implementation (e.g. "leave mentor mode, write it for me") may an agent write code, and only for that task.
 
@@ -64,8 +64,8 @@ The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](
 │   ├── input/               # Custom text input widget
 │   │   └── src/input.rs     # TextInput entity, TextElement, EntityInputHandler
 │   │                        # (adapted from GPUI's text_input example)
-│   ├── settings/            # User settings crate (placeholder)
-│   │   └── src/settings.rs
+│   ├── setting/            # User settings crate (placeholder, currently dead code)
+│   │   └── src/setting.rs
 │   └── ui/                  # Larger GPUI views + platform helpers
 │       └── src/
 │           ├── ui.rs
@@ -79,9 +79,8 @@ The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](
 │   ├── icons/              # SVG icons loaded via svg().path("icons/...")
 │   ├── fonts/              # Bundled TTF fonts (6 shipped, 4 in FONT_SUPPORT)
 │   └── mock/               # Mock TOML files (NOT currently embedded — see gotchas)
-├── page/                   # Zola static site (content/, templates/, static/, sass/)
-├── .github/workflows/      # deploy.yml (release binary), page.yml (Zola → gh-pages)
-├── .claude/skills/mentor/  # Mentor skill (hardlinked into .agents/ and .opencode/)
+├── .github/workflows/      # deploy.yml (release) — currently fully commented out
+├── .claude/skills/         # mentor/ + repo-scan/ skills (hardlinked into .agents/ and .opencode/)
 ├── .cursor/rules/          # Cursor rule deferring to the mentor-mode policy above
 ├── CLAUDE.md               # Imports this file for Claude Code
 ├── README.md               # Basic run instructions (skeletal)
@@ -104,16 +103,6 @@ cargo build --release --locked
 ```
 
 There are very few tests (only leftover template tests), no Makefile, and no custom build scripts.
-
-### Zola site
-
-Built and deployed by GitHub Actions. To build locally, install Zola and run from `page/`:
-
-```bash
-zola build
-# or for local preview
-zola serve
-```
 
 ## Architecture and control flow
 
@@ -226,17 +215,10 @@ Nearly zero coverage — the only tests are cargo-new template leftovers (`crate
 
 ## CI/CD
 
-### Release binary (`deploy.yml`)
+**No CI is currently active.** Both workflows under `.github/workflows/` are fully commented out:
 
-- Triggers on tags `v*` or manually; runs on `macos-latest` (aarch64).
-- Builds with `cargo build --release --locked`.
-- **Known breakage:** the workflow still packages `target/release/silly`, but the binary is now `monas` — the tar step will fail on the next tag push until fixed.
-- The binary is unsigned; Gatekeeper blocks it until right-click → Open.
-
-### Static site (`page.yml`)
-
-- Deploys `page/` to gh-pages via `shalzz/zola-deploy-action@v0.19.2` on pushes to `develop` touching `page/**`.
-- Base URL: `https://ddeedev.github.io/SillyProject`.
+- `deploy.yml` (macOS aarch64 release): intended to run on tags `v*` and package the binary. **Before re-enabling, fix the stale `silly` binary name — the binary is `monas`** (the tar step would fail).
+- `page.yml` (Zola site → gh-pages): references the deleted `page/` directory; re-enable only if the site returns.
 
 ## Branches
 
@@ -254,4 +236,4 @@ Nearly zero coverage — the only tests are cargo-new template leftovers (`crate
 6. **Mock data is hardcoded** in `crates/app/src/view/mod.rs`; the embedded-mock glob matches nothing; the `config/` module is dead. Persistence is entirely unwired.
 7. **GPUI deps are git-pinned** to zed-industries/zed via `Cargo.lock`; `http_client` is declared as a workspace dependency but used by no crate.
 8. **Keep the build warning-free** where possible; verify UI changes by running `cargo run`.
-9. **The mentor skill copies are hardlinks**, not symlinks — one write updates all three.
+9. **The skill files are hardlinks**, not symlinks — each skill (`mentor`, `repo-scan`) is one inode shared across `.claude/`, `.agents/`, `.opencode/`; one write updates all three copies.

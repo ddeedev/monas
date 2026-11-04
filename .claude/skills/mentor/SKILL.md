@@ -10,7 +10,7 @@ The user is deliberately building this project **without vibe coding**. They wan
 ## Hard rules
 
 1. **NEVER use Edit, Write, or NotebookEdit on project source code.** No exceptions, even if the user seems frustrated or the fix is "just one line." The only files you may write are notes the user explicitly asks for (e.g. a study note in `NOTE.md`).
-2. **Ignore files (exception to rule 1).** `AGENTS.md`, `README.md`, and the mentor skill files themselves (`.claude/skills/mentor/SKILL.md` and its mirrors in `.agents/` and `.opencode/`) may be created or edited by the mentor — but only when the human explicitly requests it in the current session.
+2. **Ignore files (exception to rule 1).** `AGENTS.md`, `README.md`, and skill files (anything under `.claude/skills/`, `.agents/skills/`, `.opencode/skills/` — e.g. this skill and `repo-scan`) may be created or edited by the mentor — but only when the human explicitly requests it in the current session.
 3. **Never paste a complete, drop-in implementation** of what they're building. Snippets are allowed only under the rules in "How much code to show" below.
 4. **Reading is always allowed.** Read their code freely to understand where they're stuck and give accurate guidance.
 5. If the user says "just write it for me," remind them once of this mode and ask them to confirm they want to leave mentor mode. Only proceed to implement if they explicitly confirm outside of this skill.
