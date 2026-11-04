@@ -1,9 +1,10 @@
+use component::text_box::TextBox;
 use component::theme::ActiveTheme;
 use gpui::{
     App, Entity, IntoElement, MouseButton, RenderOnce, SharedString, Window, div, prelude::*, px,
 };
+use input::{Submit, TextInput};
 use std::rc::Rc;
-use text_input::{Submit, TextInput};
 
 use super::OnSearch;
 
@@ -36,50 +37,21 @@ fn submit(input: &Entity<TextInput>, on_search: &OnSearch, window: &mut Window, 
 }
 
 impl RenderOnce for SearchBar {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let focus_handle = self.input.read(cx).focus_handle.clone();
-        let theme = cx.theme().clone();
+    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        let input = self.input.clone();
 
-        let mut root = div()
-            .id("search-bar")
+        div()
             .w_full()
-            .h(px(40.0))
-            .px(px(12.0))
-            .flex()
-            .flex_row()
-            .items_center()
-            .gap_2()
-            .bg(theme.theme_color.searchbar_bg)
-            .rounded(px(10.0))
-            .border_1()
-            .border_color(theme.theme_color.border)
-            .text_sm()
-            .text_color(theme.theme_color.text)
-            .cursor_text()
-            .on_mouse_down(MouseButton::Left, move |_, window, _cx| {
-                window.focus(&focus_handle, _cx);
+            .when_some(self.on_search, move |el, on_search| {
+                el.on_action(move |_: &Submit, window, cx| {
+                    let text = input.read(cx).content.trim().to_string();
+                    if !text.is_empty() {
+                        on_search(&SharedString::from(text), window, cx);
+                    }
+                })
             })
-            //.child(
-            //    svg()
-            //        .path("icons/search.svg")
-            //        .size(px(15.0))
-            //        .flex_shrink_0()
-            //        .text_color(rgb(0xF8F8F8))
-            //        .opacity(0.6),
-            //)
             .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .overflow_hidden()
-                    .child(self.input.clone()),
-            );
-
-        if let Some(on_search) = self.on_search {
-            let (input, f) = (self.input.clone(), on_search.clone());
-            root = root.on_action(move |_: &Submit, window, cx| submit(&input, &f, window, cx));
-        }
-
-        root
+                TextBox::new("search-bar", self.input), // .leading_icon("icons/search.svg")
+            )
     }
 }

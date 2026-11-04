@@ -2,9 +2,6 @@ use anyhow::anyhow;
 use gpui::{App, AssetSource, SharedString};
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
-use std::sync::OnceLock;
-
-const SYSTEM_UI_FONT: &str = ".SystemUIFont";
 
 pub struct FontAsset {
     data: &'static [u8],

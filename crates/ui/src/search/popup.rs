@@ -3,7 +3,7 @@ use gpui::{
     App, Context, Entity, EventEmitter, IntoElement, KeyBinding, MouseButton, Render, SharedString,
     Window, actions, deferred, div, prelude::*, px, rgb, rgba, svg,
 };
-use text_input::{Submit, TextInput};
+use input::{Submit, TextInput};
 
 actions!(popup, [SelectPrev, SelectNext, Dismiss]);
 

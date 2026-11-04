@@ -480,7 +480,7 @@ impl TextInput {
         self.replace_text_in_range(None, "", window, cx);
     }
 
-    fn reset(&mut self) {
+    fn _reset(&mut self) {
         self.content = "".into();
         self.selected_range = 0..0;
         self.selection_reversed = false;

@@ -42,6 +42,7 @@ pub struct ThemeColor {
     pub searchbar_text: Rgba,
     pub searchbar_active: Rgba,
     pub searchbar_hover: Rgba,
+    pub searchbar_selection: Rgba,
 
     // icons
     pub sidebar_outline: Rgba,

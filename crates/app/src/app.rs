@@ -25,7 +25,7 @@ impl AppRunner {
             load_fonts_asset(cx);
             theme::init(cx);
             action::register_keybind(cx);
-            text_input::TextInput::bind_keys(cx);
+            input::TextInput::bind_keys(cx);
             popup::Popup::bind_keys(cx);
             init_app_menu(cx);
 

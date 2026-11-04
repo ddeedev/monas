@@ -7,7 +7,7 @@ use context::space::{SidebarContext, SpaceContext};
 use gpui::{
     App, Context, Entity, FocusHandle, Focusable, Global, SharedString, Window, div, prelude::*, px,
 };
-use text_input::TextInput;
+use input::TextInput;
 use ui::{
     ActiveTheme,
     search::popup::{Popup, PopupEvent},
@@ -111,7 +111,7 @@ impl MainContent {
         }
     }
 
-    pub fn new_space(&mut self, cx: &mut Context<Self>, space_ctn: SpaceContent) {
+    pub fn _new_space(&mut self, cx: &mut Context<Self>, space_ctn: SpaceContent) {
         if let Some(logo) = space_ctn.space.read(cx).name.chars().nth(0) {
             self.space_logos.push(logo.to_string());
         }
@@ -121,7 +121,7 @@ impl MainContent {
         cx.notify();
     }
 
-    pub fn with_space(&mut self, cx: &mut Context<Self>, space_ctns: Vec<SpaceContent>) {
+    pub fn _with_space(&mut self, cx: &mut Context<Self>, space_ctns: Vec<SpaceContent>) {
         for space_ctn in space_ctns.into_iter() {
             if let Some(logo) = space_ctn.space.read(cx).name.chars().nth(0) {
                 self.space_logos.push(logo.to_string());
