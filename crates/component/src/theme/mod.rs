@@ -22,7 +22,7 @@ impl Theme {
             font_size: px(14.),
             space_name_font: "Pacifico".into(),
             folder_font: "IBM Plex Sans".into(),
-            folder_font_size: px(12.),
+            folder_font_size: px(14.),
             theme_color: ThemeColor {
                 background: rgb(0x636080),
                 border: rgb(0x565375),
@@ -63,11 +63,11 @@ impl Theme {
     }
     pub fn pink() -> Self {
         Self {
-            font_family: "JetBrainsMono".into(),
+            font_family: "SYSTEM_UI_FONT".into(),
             font_size: px(14.),
             space_name_font: "Pacifico".into(),
-            folder_font: "JetBrainsMono".into(),
-            folder_font_size: px(12.),
+            folder_font: "SYSTEM_UI_FONT".into(),
+            folder_font_size: px(14.),
             theme_color: ThemeColor {
                 // base
                 background: rgb(0xF4B6CF),

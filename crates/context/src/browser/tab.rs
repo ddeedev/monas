@@ -16,6 +16,20 @@ impl BrowserData {
             tab_number: None,
         }
     }
+
+    pub fn favicon_for(page_url: &str) -> String {
+        // TODO:: validate when move to utils func
+        // validate
+        // url::Url::parse(page_url).ok().and_then(|u| u.host_str().map(str::to_owned))
+        let host = page_url
+            .trim_start_matches("https://")
+            .trim_start_matches("http://")
+            .split("/")
+            .next()
+            .unwrap_or_default();
+
+        format!("https://www.google.com/s2/favicons?domain={host}&sz=64")
+    }
 }
 
 #[derive(Debug, Clone, Default)]

@@ -1,4 +1,5 @@
 use crate::TabData;
+use crate::{BrowserData, BrowserParams};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -65,8 +66,32 @@ impl Node {
         }
     }
 
+    pub fn ids(nodes: &[&Node]) -> Vec<NodeId> {
+        nodes.iter().map(|n| n.id.clone()).collect()
+    }
+
     pub fn next_position(&self) -> u8 {
         u8::try_from(self.children().len() + 1).unwrap_or(u8::MAX)
+    }
+
+    pub fn tab_node(name: &str, position: u8, open: bool, url: &str) -> Self {
+        let params = BrowserParams {
+            url: url.to_string(),
+            favicon: BrowserData::favicon_for(url),
+        };
+        Node::new(
+            name.to_string(),
+            NodeData::new_tab_node(TabData::new::<BrowserData>(params), open),
+            position,
+        )
+    }
+
+    pub fn folder_node(name: &str, position: u8, expand: bool, children: &[&Node]) -> Self {
+        Node::new(
+            name.to_string(),
+            NodeData::new_folder_node(Self::ids(children), expand),
+            position,
+        )
     }
 }
 

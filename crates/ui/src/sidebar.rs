@@ -8,8 +8,8 @@ use context::{
     space::SidebarContext,
 };
 use gpui::{
-    AnyElement, App, Entity, IntoElement, SharedString, Window, deferred, div, prelude::*, px, rgb,
-    svg, white,
+    AnyElement, App, Entity, IntoElement, ObjectFit, SharedString, Window, deferred, div, img,
+    prelude::*, px, rgb, svg, white,
 };
 use http::Method;
 use std::{fmt::Debug, time::Duration};
@@ -638,7 +638,7 @@ impl AppSidebar {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .child(super::favicon_element(icon, icon_color)),
+                            .child(self.favicon_element(icon, icon_color)),
                     )
             }))
     }
@@ -772,16 +772,17 @@ impl AppSidebar {
         t: &Theme,
     ) -> AnyElement {
         let indent_px = 8.0 + (depths as f32 * 8.0);
-        let (hover, active, text) = (
+        let (hover, active, text, font_size) = (
             t.theme_color.tile_bg_hover,
             t.theme_color.tile_bg_active,
             t.theme_color.text,
+            t.folder_font_size,
         );
 
         let leading: AnyElement = match data {
             TabData::Browser(b) => div()
                 .size(px(18.))
-                .child(super::favicon_element(&b.favicon, 0xFFFFFF))
+                .child(self.favicon_element(&b.favicon, 0xFFFFFF))
                 .into_any_element(),
             TabData::ApiRequest(a) => self.request_favicon(a.method.clone()).into_any_element(),
         };
@@ -810,12 +811,36 @@ impl AppSidebar {
             )
             .child(
                 div()
-                    .text_size(px(17.))
+                    .text_size(font_size)
                     .font_weight(gpui::FontWeight::SEMIBOLD)
                     .text_color(text)
                     .child(name.to_string()),
             )
             .into_any_element()
+    }
+
+    fn favicon_element(&self, favicon: &str, fallback_color: u32) -> AnyElement {
+        eprintln!("favicon : {:?}", favicon);
+
+        if favicon.starts_with("http://") || favicon.starts_with("https://") {
+            img(favicon.to_string())
+                .size(px(20.))
+                .object_fit(ObjectFit::Contain)
+                .with_fallback(move || {
+                    svg()
+                        .path("icons/globe.svg")
+                        .size(px(20.))
+                        .text_color(rgb(fallback_color))
+                        .into_any_element()
+                })
+                .into_any_element()
+        } else {
+            svg()
+                .path(favicon.to_string())
+                .size(px(20.))
+                .text_color(rgb(fallback_color))
+                .into_any_element()
+        }
     }
 
     fn request_favicon(&self, method: Method) -> impl IntoElement {
@@ -830,8 +855,8 @@ impl AppSidebar {
             //.hover(|el| el.text_color(white()))
             //.bg(rgb(0xFFFF00)),
             Method::GET => div()
-                .child("GET")
                 .text_size(px(12.))
+                .child("GET")
                 .font_weight(gpui::FontWeight::SEMIBOLD)
                 .text_color(rgb(0x00FF00)),
             Method::PUT => div()
@@ -866,11 +891,12 @@ impl AppSidebar {
         depths: usize,
         t: &Theme,
     ) -> impl IntoElement {
-        let (text, hover, folder_bg, border) = (
+        let (text, hover, folder_bg, border, font_size) = (
             t.theme_color.text,
             t.theme_color.tile_bg_hover,
             t.theme_color.folder_bg,
             t.theme_color.border,
+            t.folder_font_size,
         );
         let indent_px = 8.0 + (depths as f32 * 8.0);
         let node_id_clone = node_id.clone();
@@ -927,7 +953,7 @@ impl AppSidebar {
             )
             .child(
                 div()
-                    .text_size(px(17.))
+                    .text_size(font_size)
                     .child(name.to_string())
                     .font_weight(gpui::FontWeight::SEMIBOLD)
                     .text_color(text),

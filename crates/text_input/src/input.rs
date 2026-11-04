@@ -68,6 +68,13 @@ macro_rules! cmd_key {
         concat!("cmd-", $k)
     };
 }
+
+#[cfg(target_os = "macos")]
+macro_rules! option_key {
+    ($k:literal) => {
+        concat!("alt-", $k)
+    };
+}
 #[cfg(not(target_os = "macos"))]
 macro_rules! cmd_key {
     ($k:literal) => {
@@ -124,12 +131,12 @@ impl TextInput {
     fn word_bindings() -> Vec<KeyBinding> {
         let ctx = Some(CONTEXT);
         vec![
-            KeyBinding::new(cmd_key!("left"), WordLeft, ctx),
-            KeyBinding::new(cmd_key!("right"), WordRight, ctx),
-            KeyBinding::new(cmd_key!("shift-left"), SelectWordLeft, ctx),
-            KeyBinding::new(cmd_key!("shift-right"), SelectWordRight, ctx),
-            KeyBinding::new(cmd_key!("backspace"), DeleteWordLeft, ctx),
-            KeyBinding::new(cmd_key!("delete"), DeleteWordRight, ctx),
+            KeyBinding::new(option_key!("left"), WordLeft, ctx),
+            KeyBinding::new(option_key!("right"), WordRight, ctx),
+            KeyBinding::new(option_key!("shift-left"), SelectWordLeft, ctx),
+            KeyBinding::new(option_key!("shift-right"), SelectWordRight, ctx),
+            KeyBinding::new(option_key!("backspace"), DeleteWordLeft, ctx),
+            KeyBinding::new(option_key!("delete"), DeleteWordRight, ctx),
         ]
     }
 

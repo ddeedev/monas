@@ -1,7 +1,6 @@
 use component::theme::ActiveTheme;
 use gpui::{
     App, Entity, IntoElement, MouseButton, RenderOnce, SharedString, Window, div, prelude::*, px,
-    rgb, svg,
 };
 use std::rc::Rc;
 use text_input::{Submit, TextInput};

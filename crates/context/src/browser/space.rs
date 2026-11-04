@@ -94,6 +94,15 @@ impl SidebarContext {
     pub fn with_nodes(self, nodes: HashMap<NodeId, Node>) -> Self {
         Self { nodes, ..self }
     }
+
+    pub fn new_sidebar(favorites: Vec<NodeId>, folders: Vec<NodeId>, all: Vec<Node>) -> Self {
+        let nodes = all.into_iter().map(|n| (n.id.clone(), n)).collect();
+
+        Self::new()
+            .with_nodes(nodes)
+            .with_favorite(favorites)
+            .with_folder(folders)
+    }
 }
 
 impl Default for SidebarContext {
