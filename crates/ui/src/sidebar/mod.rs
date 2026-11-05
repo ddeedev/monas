@@ -1,5 +1,6 @@
 pub mod app_sidebar;
 pub mod event;
+pub mod util;
 
 use crate::platform::set_traffic_lights_hidden;
 use app_sidebar::AppSidebar;
@@ -119,40 +120,55 @@ impl SidebarView {
         cx.notify();
     }
 
+    fn tick(&mut self) -> bool {
+        let width_target = if self.hidden { 0.0 } else { self.width };
+        let float_target = if self.floating_visible { 1.0 } else { 0.0 };
+
+        let (w, w_done) = util::animating(self.width_anim, width_target, 0.65, 3.);
+        let (f, f_done) = util::animating(self.floating_progress, float_target, 0.5, 0.03);
+
+        self.width_anim = w;
+        self.floating_progress = f;
+        w_done && f_done
+    }
+
+    fn start_animation(&mut self, cx: &mut gpui::Context<Self>) {
+        if self.animating {
+            return;
+        }
+
+        self.animating = true;
+
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(Duration::from_millis(16))
+                    .await;
+
+                let result = this.update(cx, |this, cx| {
+                    let done = this.tick();
+                    if done {
+                        this.animating = false;
+                    }
+                    cx.notify();
+                    done
+                });
+
+                if !matches!(result, Ok(false)) {
+                    break;
+                }
+            }
+        })
+        .detach();
+    }
+
     pub fn set_hidden(&mut self, hidden: bool, cx: &mut gpui::Context<Self>) {
         if self.hidden == hidden {
             return;
         }
         self.hidden = hidden;
         cx.notify();
-        if self.animating {
-            return;
-        }
-        self.animating = true;
-        cx.spawn(async move |this, cx| {
-            loop {
-                cx.background_executor()
-                    .timer(Duration::from_millis(16))
-                    .await;
-                match this.update(cx, |this, cx| {
-                    let target = if this.hidden { 0.0 } else { this.width };
-                    let diff = target - this.width_anim;
-                    let settled = diff.abs() < 3.0;
-                    this.width_anim = if settled {
-                        target
-                    } else {
-                        this.width_anim + diff * 0.65
-                    };
-                    cx.notify();
-                    settled
-                }) {
-                    Ok(true) | Err(_) => break,
-                    Ok(false) => {}
-                }
-            }
-            let _ = this.update(cx, |this, _| this.animating = false);
-        })
-        .detach();
+        self.start_animation(cx);
     }
 
     pub fn set_floating_visible(&mut self, visible: bool, cx: &mut gpui::Context<Self>) {
@@ -161,34 +177,7 @@ impl SidebarView {
         }
         self.floating_visible = visible;
         cx.notify();
-        if self.floating_animating {
-            return;
-        }
         self.floating_animating = true;
-        cx.spawn(async move |this, cx| {
-            loop {
-                cx.background_executor()
-                    .timer(Duration::from_millis(16))
-                    .await;
-                match this.update(cx, |this, cx| {
-                    let target = if this.floating_visible { 1.0 } else { 0.0 };
-                    let diff = target - this.floating_progress;
-                    let settled = diff.abs() < 0.03;
-                    this.floating_progress = if settled {
-                        target
-                    } else {
-                        this.floating_progress + diff * 0.5
-                    };
-                    cx.notify();
-                    settled
-                }) {
-                    Ok(true) | Err(_) => break,
-                    Ok(false) => {}
-                }
-            }
-            let _ = this.update(cx, |this, _| this.floating_animating = false);
-        })
-        .detach();
     }
 }
 
@@ -213,8 +202,8 @@ impl Render for SidebarView {
         });
 
         let entity = cx.entity();
+        let view = entity.clone();
 
-        let view = cx.entity();
         let on_search: OnSearch = Rc::new(move |q, _w, cx| {
             view.update(cx, |_, cx| cx.emit(SidebarEvent::Search(q.clone())));
         });
@@ -228,6 +217,7 @@ impl Render for SidebarView {
             .flex_shrink_0()
             .flex()
             .flex_row()
+            // register dragging event
             .on_drag_move(
                 move |event: &gpui::DragMoveEvent<SidebarResizeDrag>, _window, cx| {
                     let pos: f32 = event.event.position.x.into();
@@ -241,6 +231,11 @@ impl Render for SidebarView {
                     });
                 },
             )
+            // Base sidebar
+            // we have two sidebar
+            // 1. this one (base)
+            // 2. floating sidebar
+            // only show one at once
             .when(self.width_anim > 0.0, |el| {
                 el.child(
                     div()
@@ -264,11 +259,12 @@ impl Render for SidebarView {
                                 move |q, w, cx| f(q, w, cx)
                             })
                             .width(self.width)
-                            .toggle_sidebar(move |window, cx| {
+                            .toggle_sidebar(move |_, window, cx| {
                                 toggle(&gpui::ClickEvent::default(), window, cx);
                             }),
                         ),
                 )
+                // drag bar appear when mouse hover at most right of sidebar
                 .child(
                     div()
                         .id("sidebar-resize-handle")
@@ -281,6 +277,8 @@ impl Render for SidebarView {
                         }),
                 )
             })
+            // Floating sidebar section
+            // auto show when mouse hover at most left of window
             .child(deferred(
                 div()
                     .when(self.hidden && self.width_anim <= 0.0, |el| {
@@ -322,7 +320,7 @@ impl Render for SidebarView {
                                         })
                                         .width(self.width)
                                         .toggle_sidebar(
-                                            move |window, cx| {
+                                            move |_, window, cx| {
                                                 toggle_floating(
                                                     &gpui::ClickEvent::default(),
                                                     window,

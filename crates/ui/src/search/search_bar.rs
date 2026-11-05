@@ -1,8 +1,5 @@
-use component::text_box::TextBox;
-use component::theme::ActiveTheme;
-use gpui::{
-    App, Entity, IntoElement, MouseButton, RenderOnce, SharedString, Window, div, prelude::*, px,
-};
+use component::TextBox;
+use gpui::{App, Entity, IntoElement, RenderOnce, SharedString, Window, div, prelude::*};
 use input::{Submit, TextInput};
 use std::rc::Rc;
 
@@ -25,14 +22,6 @@ impl SearchBar {
     pub fn on_search(mut self, f: impl Fn(&SharedString, &mut Window, &mut App) + 'static) -> Self {
         self.on_search = Some(Rc::new(f));
         self
-    }
-}
-
-fn submit(input: &Entity<TextInput>, on_search: &OnSearch, window: &mut Window, cx: &mut App) {
-    let text = input.read(cx).content.clone();
-    let trimmed = text.trim();
-    if !trimmed.is_empty() {
-        on_search(&SharedString::from(trimmed.to_string()), window, cx);
     }
 }
 

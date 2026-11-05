@@ -1,20 +1,14 @@
+pub mod button;
+pub mod favicon;
+pub mod list_row;
+pub mod text_box;
 pub mod theme;
 pub mod tile;
-pub mod favicon;
-pub mod text_box;
-pub mod list_row;
+pub mod window_control;
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub use crate::favicon::Favicon;
+pub use crate::list_row::ListRow;
+pub use crate::text_box::TextBox;
+pub use crate::tile::Tile;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+use gpui::{App, ClickEvent, Window};

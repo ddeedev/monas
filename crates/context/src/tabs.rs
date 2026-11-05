@@ -1,12 +1,10 @@
 use crate::BrowserData;
-use crate::api::tab::ApiRequestData;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum TabData {
     Browser(BrowserData),
-    ApiRequest(ApiRequestData),
 }
 
 /// implement by every concrete tab type

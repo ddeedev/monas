@@ -1,8 +1,8 @@
 use crate::Theme;
 use crate::search::SearchBar;
-use component::favicon::Favicon;
 use component::list_row::ListRow;
 use component::tile::Tile;
+use component::{button::Button, favicon::Favicon};
 
 use action::SwitchSpace;
 use context::{
@@ -11,17 +11,16 @@ use context::{
     space::SidebarContext,
 };
 use gpui::{
-    AnyElement, App, Entity, IntoElement, Rgba, SharedString, Window, div, prelude::*, px, rgb,
-    svg, white,
+    AnyElement, App, ClickEvent, Entity, IntoElement, Rgba, SharedString, Window, div, prelude::*,
+    px, rgb, svg, white,
 };
-use http::Method;
 
 use crate::ActiveTheme;
 use input::TextInput;
 use std::rc::Rc;
 
 type OnSearch = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
-type ToggleHadler = Box<dyn Fn(&mut Window, &mut App) + 'static>;
+type ToggleHadler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
 pub struct AppSidebar {
@@ -68,7 +67,10 @@ impl AppSidebar {
         self
     }
 
-    pub fn toggle_sidebar(mut self, f: impl Fn(&mut Window, &mut App) + 'static) -> Self {
+    pub fn toggle_sidebar(
+        mut self,
+        f: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
         self.on_toggle = Some(Box::new(f));
         self
     }
@@ -135,11 +137,7 @@ impl RenderOnce for AppSidebar {
                             .font_family(theme.folder_font.clone())
                             .gap_2()
                             .flex_1()
-                            .children(
-                                folder
-                                    .iter()
-                                    .map(|f| self.render_node(&space, f, 0, &theme)),
-                            ),
+                            .children(folder.iter().map(|f| self.render_node(space, f, 0, &theme))),
                     )
                     .child(self.render_space_selection(&theme)),
             )
@@ -153,30 +151,19 @@ impl AppSidebar {
         t: &Theme,
     ) -> impl IntoElement {
         let (hover, outline) = (t.theme_color.tile_bg, t.theme_color.sidebar_outline);
-        let mut toggle_btn = div()
-            .id("sidebar-toggle")
+
+        let toggle_btn = Button::new("sidebar-toggle")
             .w(px(30.0))
             .h(px(28.0))
             .rounded(px(6.0))
             .cursor_pointer()
-            .flex()
-            .justify_center()
-            .items_center()
+            .opacity(0.8)
+            .icon("icons/sidebar-left.svg")
+            .icon_h(px(16.))
+            .icon_w(px(18.))
+            .icon_color(outline)
             .hover(move |style| style.bg(hover))
-            .child(
-                svg()
-                    .path("icons/sidebar-left.svg")
-                    .w(px(18.0))
-                    .h(px(16.0))
-                    .text_color(outline)
-                    .opacity(0.5),
-            );
-
-        if let Some(on_toggle) = on_toggle {
-            toggle_btn = toggle_btn.on_click(move |_, window, ctx| {
-                on_toggle(window, ctx);
-            });
-        }
+            .when_some(on_toggle, move |btn, f| btn.on_click(f));
 
         div()
             .mt_2()
@@ -185,27 +172,30 @@ impl AppSidebar {
             .items_center()
             .justify_between()
             .pb_2()
-            .on_mouse_move(|_, window, _| {
-                window.start_window_move();
-            })
             // NOTE: 1.2 Enable custom traffic light
-            .child(self.render_traffic_lights())
+            .child(self.render_traffic_lights(t))
             .child(toggle_btn)
     }
 
     // TODO:: add traffic light icon [cross,expand,hyphen]
-    fn render_traffic_lights(&self) -> impl IntoElement {
-        let light = |id: &'static str, color: u32| {
+    fn render_traffic_lights(&self, t: &Theme) -> impl IntoElement {
+        const GROUP: &str = "traffic-lights";
+        let idle = t.theme_color.background;
+
+        let light = |id: &'static str, hover_color: u32| {
             div()
                 .id(id)
-                .w(px(12.0))
-                .h(px(12.0))
+                .size(px(16.))
+                .border_1()
+                .border_color(t.theme_color.tile_bg_active)
                 .rounded_full()
-                .bg(rgb(color))
                 .cursor_pointer()
+                .bg(idle)
+                .group_hover(GROUP, move |s| s.bg(rgb(hover_color)).border_color(idle))
         };
 
         div()
+            .group(GROUP)
             .flex()
             .items_center()
             .gap_2()
@@ -272,11 +262,10 @@ impl AppSidebar {
             .children(tabs.iter().enumerate().map(|(index, tab)| {
                 let icon = match tab {
                     TabData::Browser(d) => d.favicon.clone(),
-                    TabData::ApiRequest(d) => d.favicon.clone(),
                 };
                 Tile::new(("essential", index))
                     .width(fraction)
-                    .child(Favicon::new(icon))
+                    .child(Favicon::new(icon).size(px(20.)))
             }))
     }
 
@@ -410,52 +399,9 @@ impl AppSidebar {
             .depth(depths)
             .active(open)
             .leading(match data {
-                TabData::Browser(b) => Favicon::new(b.favicon.clone())
-                    .size(px(18.))
-                    .into_any_element(),
-                TabData::ApiRequest(a) => self.request_favicon(a.method.clone()).into_any_element(),
+                TabData::Browser(b) => Favicon::new(b.favicon.clone()).size(px(18.)),
             })
             .into_any_element()
-    }
-
-    fn request_favicon(&self, method: Method) -> impl IntoElement {
-        match method {
-            Method::POST => div()
-                .child("POST")
-                .text_size(px(12.))
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_color(rgb(0xFFFF00)),
-            //.h(px(20.))
-            //.w(px(47.))
-            //.hover(|el| el.text_color(white()))
-            //.bg(rgb(0xFFFF00)),
-            Method::GET => div()
-                .text_size(px(12.))
-                .child("GET")
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_color(rgb(0x00FF00)),
-            Method::PUT => div()
-                .child("PUT")
-                .text_size(px(12.))
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_color(rgb(0x0000FF)),
-            Method::PATCH => div()
-                .child("PATCH")
-                .text_size(px(12.))
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_color(rgb(0x800080)),
-            Method::DELETE => div()
-                .child("DELETE")
-                .text_size(px(12.))
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_color(rgb(0xFF0000)),
-            Method::OPTIONS => div()
-                .child("OPTIONS")
-                .text_size(px(12.))
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_color(rgb(0x9400D3)),
-            _ => div(),
-        }
     }
 
     fn render_folder(

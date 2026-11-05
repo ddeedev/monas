@@ -66,13 +66,11 @@ impl MainContent {
         let name: SharedString = ctx.name.clone().into();
         let number = ctx.number;
 
-        // The sidebar data lives in one place: the entity. If SidebarContext is Clone,
-        // you can use `ctx.sidebar.clone()` instead of replacing it.
         let sidebar_ctx = std::mem::replace(&mut ctx.sidebar, SidebarContext::new());
         let sidebar_entity = cx.new(|_| sidebar_ctx);
         cx.observe(&sidebar_entity, |_, _, cx| cx.notify()).detach();
 
-        let search_input = cx.new(|cx| TextInput::new("Search…", cx));
+        let search_input = cx.new(|cx| TextInput::new("Search or Enter URL...", cx));
         let sidebar = cx.new(|_| SidebarView::new(name, number, sidebar_entity, search_input));
 
         let space = cx.new(|_| ctx);
@@ -228,7 +226,7 @@ impl Render for MainContent {
                             .update(cx, |sidebar, cx| sidebar.set_floating_visible(false, cx));
                     })),
             )
-            // request UI
+            // Web view UI
             .child(div().absolute().size_full().child(current_popup))
     }
 }

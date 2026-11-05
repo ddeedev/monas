@@ -79,20 +79,24 @@ impl SidebarContext {
         }
     }
 
-    pub fn with_folder(self, folder: Vec<NodeId>) -> Self {
-        Self { folder, ..self }
+    pub fn with_folder(mut self, folder: Vec<NodeId>) -> Self {
+        self.folder = folder;
+        self
     }
 
-    pub fn with_pinned_tab(self, pinned: Vec<NodeId>) -> Self {
-        Self { pinned, ..self }
+    pub fn with_pinned_tab(mut self, pinned: Vec<NodeId>) -> Self {
+        self.pinned = pinned;
+        self
     }
 
-    pub fn with_favorite(self, favorites: Vec<NodeId>) -> Self {
-        Self { favorites, ..self }
+    pub fn with_favorite(mut self, favorites: Vec<NodeId>) -> Self {
+        self.favorites = favorites;
+        self
     }
 
-    pub fn with_nodes(self, nodes: HashMap<NodeId, Node>) -> Self {
-        Self { nodes, ..self }
+    pub fn with_nodes(mut self, nodes: HashMap<NodeId, Node>) -> Self {
+        self.nodes = nodes;
+        self
     }
 
     pub fn new_sidebar(favorites: Vec<NodeId>, folders: Vec<NodeId>, all: Vec<Node>) -> Self {
