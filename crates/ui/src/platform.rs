@@ -1,3 +1,4 @@
+/// Hidle traffic light then we create our own
 #[cfg(target_os = "macos")]
 pub fn set_traffic_lights_hidden(window: &mut gpui::Window, hidden: bool) {
     use objc2_app_kit::{NSView, NSWindowButton};

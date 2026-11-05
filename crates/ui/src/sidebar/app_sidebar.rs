@@ -13,7 +13,7 @@ use context::{
 };
 use gpui::{
     AnyElement, App, ClickEvent, Entity, IntoElement, Rgba, SharedString, Window, div, prelude::*,
-    px, rgb, svg, white,
+    px, svg, white,
 };
 
 use crate::ActiveTheme;
@@ -252,12 +252,8 @@ impl AppSidebar {
             .text_base()
             // LEFT: archive button
             .child(
-                div()
-                    .id("space-selection-archive")
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_base()
+                Button::new("space-selection-archive")
+                    .label("A")
                     .cursor_pointer()
                     .on_click(move |_event, window, cx| {
                         window.dispatch_action(Box::new(SwitchSpace(1)), cx);
@@ -265,13 +261,13 @@ impl AppSidebar {
                     .rounded_full()
                     .w_8()
                     .h_full()
-                    .bg(bg)
-                    .child("A"),
+                    .bg(bg),
             )
             // CENTER: space logos
             .child(
                 div()
                     .flex()
+                    .h_full()
                     .flex_row()
                     .items_center()
                     .justify_center()
@@ -279,8 +275,7 @@ impl AppSidebar {
                     .children(self.space_logos.iter().enumerate().map(|(idx, s)| {
                         let space_number = idx + 1;
                         let is_active = space_number == self.active_space;
-                        div()
-                            .id(("space-selection", idx as u64))
+                        Button::new(("space-selection", idx as u64))
                             .flex()
                             .items_center()
                             .justify_center()
@@ -293,27 +288,22 @@ impl AppSidebar {
                             .w_8()
                             .h_full()
                             .bg(if is_active { active } else { tile })
-                            .child(s.to_string().to_uppercase())
+                            // TODO:: use space emoji
+                            .label(s.to_string().to_uppercase())
                     })),
             )
             // RIGHT: add button
             .child(
-                div()
-                    .id("space-selection-plus")
-                    .flex()
-                    .items_center()
-                    .justify_center()
+                Button::new("space-selection-plus")
+                    .label("+")
                     .text_base()
-                    .cursor_pointer()
-                    .on_click(move |_event, window, cx| {
-                        // TODO: real add-space action
-                        window.dispatch_action(Box::new(SwitchSpace(1)), cx);
-                    })
                     .rounded_full()
                     .w_8()
                     .h_full()
                     .bg(bg)
-                    .child("+"),
+                    .on_click(move |_event, window, cx| {
+                        window.dispatch_action(Box::new(SwitchSpace(1)), cx);
+                    }),
             )
     }
 

@@ -173,7 +173,7 @@ impl RenderOnce for Button {
             .justify_center()
             .items_center()
             .line_height(relative(1.))
-            .when_some(self.label, |this, label| this.aria_label(label))
+            .when_some(self.label.clone(), |this, label| this.aria_label(label))
             // FOCUS: only register this element as focusable when it is both
             // focusable and enabled.
             //  - `tab_index` / `tab_stop` configure the handle: its position in the
@@ -226,5 +226,6 @@ impl RenderOnce for Button {
                         }),
                 )
             })
+            .when_some(self.label, |this, label| this.child(label))
     }
 }
