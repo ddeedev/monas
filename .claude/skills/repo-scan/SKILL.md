@@ -15,16 +15,20 @@ A repeatable audit workflow for the monas workspace. The output is a prioritized
 - **Categorize** findings: `bug` / `smell` / `dead-code` / `design-gap` / `docs-stale`.
 - **Do not re-explain** items already documented in AGENTS.md gotchas — just verify and one-line them.
 - **Do not flag** the dormant REST types (`crates/context/src/api/`) for deletion — the feature may return.
+- **Reuse over duplication.** When similar logic/markup appears in multiple places, the finding must point to the existing implementation to reuse (helper, component, theme field) rather than suggesting a new abstraction from scratch. Prefer "reuse X" over "extract Y" when X already exists.
+- **Suggest memory savings.** Actively look for allocation waste — deep/per-render clones, `String`/`Vec` allocations that could be borrows, `to_string().into()` roundtrips, cloned `Theme`/`ThemeColor`, `Rc`-able callbacks rebuilt every frame, unbounded growth (logs, caches). Every such finding names the cheaper alternative (borrow, `Arc`/`Rc`, `Cow`, pass by reference, cache once).
 
 ## Workflow
 
 1. **Ground truth first.** `git status --short` + `git log --oneline -8` (uncommitted work? recent pivots?). Read `AGENTS.md` for structure, conventions, and known gotchas.
 2. **Build health.** `cargo check` — capture every warning/error. "Warning-free" is a repo value; warnings are findings.
-3. **Verify known issues.** AGENTS.md gotchas + findings from previous scans. Each gets a status: FIXED / STILL PRESENT / CHANGED, with current `file:line`.
+3. **Verify known issues.** AGENTS.md gotchas + unresolved findings from previous scans. Each gets a status: STILL PRESENT / CHANGED, with current `file:line`. **FIXED items are cleared from memory**: drop them from the tracking list entirely — they are not carried into the report or future scans. (If a fix is idiomatic, credit it once under Praiseworthy.)
 4. **Pattern sweep** (grep the workspace):
    - `unwrap()` / `expect()` / `panic!` in non-test code
    - dead code: compiler warnings, underscore-prefixed `pub` fns, unused workspace deps (root `Cargo.toml` vs member manifests)
-   - `#[cfg(target_os)]` gaps (macros/calls used outside their guard)
+   - duplicate code: near-identical blocks/functions/element chains → suggest reusing the existing one (name it)
+   - memory waste: `.clone()` of large state in render paths, re-allocating callbacks/closures per frame, `to_string()` roundtrips, owned `String` where `&str`/`SharedString` borrow suffices
+   - `#[cfg(target_os)]` gaps — only if a cross-platform decision exists (see Project decisions)
    - `TODO` / `FIXME`
    - per-render clones: `.read(cx).clone()` in render paths
    - duplicate type definitions across crates
@@ -37,9 +41,15 @@ A repeatable audit workflow for the monas workspace. The output is a prioritized
 
 ## Output format
 
-1. **Status table** of previously-known items (one line each: item → status → `file:line`).
+1. **Status table** of *unresolved* previously-known items only (one line each: item → status → `file:line`). FIXED items are omitted — cleared from memory.
 2. **New findings** grouped by category, each with `file:line`, one-sentence why, and the concept to fix it.
 3. **Praiseworthy** patterns.
 4. **Suggested order** (risk × effort), ending with a mentor hand-back: which item to start with, what to try, and how to verify (`cargo check`, `cargo run`, expected behavior).
 
-Keep it concise: tables over prose. This repo's known hotspots: `crates/ui/src/sidebar/`, `crates/ui/src/search/popup.rs`, `crates/input/src/input.rs`, `crates/context/src/node.rs` (no mutation/removal API yet), `crates/component/src/theme/` (16+ unread `ThemeColor` fields), macOS-only cfg gaps.
+Keep it concise: tables over prose. This repo's known hotspots: `crates/ui/src/sidebar/`, `crates/ui/src/search/popup.rs`, `crates/input/src/input.rs`, `crates/context/src/node.rs` (no mutation/removal API yet), `crates/component/src/theme/` (many unread `ThemeColor` fields).
+
+## Project decisions
+
+Standing decisions that constrain findings — respect them, don't re-litigate:
+
+- **macOS-only** (2026-11-05): do not flag missing `#[cfg(not(target_os = "macos"))]` arms or non-macOS stubs as findings. Only mention them if the human revisits cross-platform support.
