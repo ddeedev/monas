@@ -133,11 +133,12 @@ impl SidebarView {
     }
 
     fn start_animation(&mut self, cx: &mut gpui::Context<Self>) {
-        if self.animating {
+        if self.animating || self.floating_animating {
             return;
         }
 
         self.animating = true;
+        self.floating_animating = true;
 
         cx.spawn(async move |this, cx| {
             loop {
@@ -149,6 +150,7 @@ impl SidebarView {
                     let done = this.tick();
                     if done {
                         this.animating = false;
+                        this.floating_animating = false;
                     }
                     cx.notify();
                     done
@@ -177,7 +179,7 @@ impl SidebarView {
         }
         self.floating_visible = visible;
         cx.notify();
-        self.floating_animating = true;
+        self.start_animation(cx);
     }
 }
 
