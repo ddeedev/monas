@@ -1,6 +1,5 @@
 use gpui::{
-    App, Hsla, ObjectFit, Pixels, Rgba, SharedString, StyleRefinement, Window, img, prelude::*, px,
-    rgb, svg,
+    App, ObjectFit, Rgba, SharedString, StyleRefinement, Window, img, prelude::*, rgb, svg,
 };
 
 const FALLBACK_ICON: &str = "icons/globe.svg";

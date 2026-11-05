@@ -29,7 +29,6 @@ pub struct SidebarView {
     animating: bool,
     floating_visible: bool,
     floating_progress: f32,
-    floating_animating: bool,
     space_name: SharedString,
     entity: Entity<SidebarContext>,
     space_logos: Vec<String>,
@@ -53,7 +52,6 @@ impl SidebarView {
             animating: false,
             floating_visible: false,
             floating_progress: 0.0,
-            floating_animating: false,
             space_logos: vec![],
             active_space,
             space_name,
@@ -85,7 +83,6 @@ impl SidebarView {
         self.animating = false;
         self.floating_visible = false;
         self.floating_progress = 0.0;
-        self.floating_animating = false;
 
         cx.notify();
     }
@@ -133,12 +130,11 @@ impl SidebarView {
     }
 
     fn start_animation(&mut self, cx: &mut gpui::Context<Self>) {
-        if self.animating || self.floating_animating {
+        if self.animating {
             return;
         }
 
         self.animating = true;
-        self.floating_animating = true;
 
         cx.spawn(async move |this, cx| {
             loop {
@@ -150,7 +146,6 @@ impl SidebarView {
                     let done = this.tick();
                     if done {
                         this.animating = false;
-                        this.floating_animating = false;
                     }
                     cx.notify();
                     done
@@ -249,7 +244,6 @@ impl Render for SidebarView {
                         .justify_end()
                         .child(
                             AppSidebar::new(
-                                false,
                                 self.space_name.clone(),
                                 self.active_space,
                                 self.entity.clone(),
@@ -309,7 +303,6 @@ impl Render for SidebarView {
                                     .shadow_lg()
                                     .child(
                                         AppSidebar::new(
-                                            false,
                                             self.space_name.clone(),
                                             self.active_space,
                                             self.entity.clone(),

@@ -1,4 +1,4 @@
-use crate::node::{Node, NodeId};
+use crate::node::{Node, NodeData, NodeId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -106,6 +106,16 @@ impl SidebarContext {
             .with_nodes(nodes)
             .with_favorite(favorites)
             .with_folder(folders)
+    }
+
+    /// Uitl function provied for mutate context
+    /// must prevent UI interfere with memory directly
+    pub fn toggle_folder(&mut self, id: &NodeId) {
+        if let Some(node) = self.nodes.get_mut(id)
+            && let NodeData::Folder { expand, .. } = &mut node.data
+        {
+            *expand = !*expand;
+        }
     }
 }
 

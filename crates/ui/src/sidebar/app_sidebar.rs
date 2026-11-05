@@ -24,7 +24,6 @@ type ToggleHadler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
 pub struct AppSidebar {
-    hide: bool,
     width: f32,
     on_toggle: Option<ToggleHadler>,
     space_name: SharedString,
@@ -37,7 +36,6 @@ pub struct AppSidebar {
 
 impl AppSidebar {
     pub fn new(
-        hide: bool,
         space_name: SharedString,
         active_space: usize,
         entity: Entity<SidebarContext>,
@@ -45,7 +43,6 @@ impl AppSidebar {
         search_input: Entity<TextInput>,
     ) -> Self {
         Self {
-            hide,
             width: 240.0,
             on_toggle: None,
             space_name,
@@ -78,10 +75,6 @@ impl AppSidebar {
 
 impl RenderOnce for AppSidebar {
     fn render(mut self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        if self.hide {
-            return div();
-        }
-
         let theme = cx.theme().clone();
 
         let mut search = SearchBar::new(self.search_input.clone());
@@ -421,12 +414,8 @@ impl AppSidebar {
             .leading(folder_icon(expand, fill, stroke))
             .on_click(move |_, _, cx| {
                 entity.update(cx, |ctx, cx| {
-                    if let Some(node) = ctx.nodes.get_mut(&click_id)
-                        && let NodeData::Folder { expand, .. } = &mut node.data
-                    {
-                        *expand = !*expand;
-                        cx.notify();
-                    }
+                    ctx.toggle_folder(&click_id);
+                    cx.notify();
                 });
             })
     }

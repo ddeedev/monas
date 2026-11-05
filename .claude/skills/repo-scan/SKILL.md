@@ -5,7 +5,7 @@ description: Use when the user asks to scan/review/audit the monas repo and sugg
 
 # Repo Scan — Audit & Suggest
 
-A repeatable audit workflow for the monas workspace. The output is a prioritized report the human acts on themselves — never a patch.
+A repeatable audit workflow for the monas workspace. The output is a prioritized report the human acts on themselves — never a patch. The scan's job is **judgment the compiler can't give**: bad decisions, poor code structure, design gaps, missed reuse, memory waste. Anything `cargo check` already prints is not a finding.
 
 ## Rules
 
@@ -17,15 +17,17 @@ A repeatable audit workflow for the monas workspace. The output is a prioritized
 - **Do not flag** the dormant REST types (`crates/context/src/api/`) for deletion — the feature may return.
 - **Reuse over duplication.** When similar logic/markup appears in multiple places, the finding must point to the existing implementation to reuse (helper, component, theme field) rather than suggesting a new abstraction from scratch. Prefer "reuse X" over "extract Y" when X already exists.
 - **Suggest memory savings.** Actively look for allocation waste — deep/per-render clones, `String`/`Vec` allocations that could be borrows, `to_string().into()` roundtrips, cloned `Theme`/`ThemeColor`, `Rc`-able callbacks rebuilt every frame, unbounded growth (logs, caches). Every such finding names the cheaper alternative (borrow, `Arc`/`Rc`, `Cow`, pass by reference, cache once).
+- **Compiler output is not a finding.** The human sees warnings in `cargo check` — never transcribe unused imports / dead-code warnings into the report. A warning may be used as a *lead*: if it exposes a deeper problem (wrong owner, missing wiring, broken abstraction), report that judgment-based finding, not the warning.
 
 ## Workflow
 
 1. **Ground truth first.** `git status --short` + `git log --oneline -8` (uncommitted work? recent pivots?). Read `AGENTS.md` for structure, conventions, and known gotchas.
-2. **Build health.** `cargo check` — capture every warning/error. "Warning-free" is a repo value; warnings are findings.
+2. **Build health.** `cargo check` — ground truth only (does it build? did the warning set shift since last scan?). Do not report the warnings themselves; chase them only as leads for design findings.
 3. **Verify known issues.** AGENTS.md gotchas + unresolved findings from previous scans. Each gets a status: STILL PRESENT / CHANGED, with current `file:line`. **FIXED items are cleared from memory**: drop them from the tracking list entirely — they are not carried into the report or future scans. (If a fix is idiomatic, credit it once under Praiseworthy.)
 4. **Pattern sweep** (grep the workspace):
    - `unwrap()` / `expect()` / `panic!` in non-test code
-   - dead code: compiler warnings, underscore-prefixed `pub` fns, unused workspace deps (root `Cargo.toml` vs member manifests)
+   - dead code: underscore-prefixed `pub` fns, unused workspace deps (root `Cargo.toml` vs member manifests) — for each, ask *why* it died (mid-refactor? missing wiring? wrong abstraction?) and report the why, not just the item
+   - design smells: state with the wrong owner, UI mutating domain state directly, implicit invariants that only hold by accident, entities where plain data suffices, swallowed errors, actions/events wired on one end only
    - duplicate code: near-identical blocks/functions/element chains → suggest reusing the existing one (name it)
    - memory waste: `.clone()` of large state in render paths, re-allocating callbacks/closures per frame, `to_string()` roundtrips, owned `String` where `&str`/`SharedString` borrow suffices
    - `#[cfg(target_os)]` gaps — only if a cross-platform decision exists (see the design-decisions skill)
@@ -42,7 +44,7 @@ A repeatable audit workflow for the monas workspace. The output is a prioritized
 ## Output format
 
 1. **Status table** of *unresolved* previously-known items only (one line each: item → status → `file:line`). FIXED items are omitted — cleared from memory.
-2. **New findings** grouped by category, each with `file:line`, one-sentence why, and the concept to fix it.
+2. **New findings** grouped by category, lead with design/architecture items (bad decisions, structural problems); mechanical cleanups (typos, redundant code) go last. Each has `file:line`, one-sentence why, and the concept to fix it. No compiler-warning items.
 3. **Praiseworthy** patterns.
 4. **Suggested order** (risk × effort), ending with a mentor hand-back: which item to start with, what to try, and how to verify (`cargo check`, `cargo run`, expected behavior).
 

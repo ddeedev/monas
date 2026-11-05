@@ -1,3 +1,4 @@
+use component::theme::ActiveTheme;
 use context::BrowserData;
 use gpui::{
     App, Context, Entity, EventEmitter, IntoElement, KeyBinding, MouseButton, Render, SharedString,
@@ -124,6 +125,8 @@ impl Render for Popup {
             return div().into_any_element();
         }
 
+        let t = cx.theme().clone();
+
         let rows = self.filtered(cx);
         let selected = self.selected.min(rows.len().saturating_sub(1));
 
@@ -140,7 +143,7 @@ impl Render for Popup {
                 .items_center()
                 .gap_3()
                 .cursor_pointer()
-                .when(is_sel, |el| el.bg(rgb(0x3D3DF5)))
+                .when(is_sel, |el| el.bg(t.theme_color.searchbar_selection))
                 .on_mouse_move(cx.listener(move |this, _, _, cx| {
                     if this.selected != i {
                         this.selected = i;
@@ -154,7 +157,7 @@ impl Render for Popup {
                     svg()
                         .path(item.favicon.clone())
                         .size(px(20.))
-                        .text_color(rgb(0xF8F8F8)),
+                        .text_color(t.theme_color.searchbar_text),
                 )
                 .child(
                     div()
@@ -192,7 +195,8 @@ impl Render for Popup {
                     div()
                         .id("popup-panel")
                         .key_context("Popup")
-                        .occlude() // clicks on the panel don't reach the backdrop
+                        // clicks on the panel don't reach the backdrop
+                        .occlude()
                         .on_action(cx.listener(Self::select_next))
                         .on_action(cx.listener(Self::select_prev))
                         .on_action(cx.listener(Self::dismiss))
@@ -202,12 +206,12 @@ impl Render for Popup {
                         .max_w_full()
                         .flex()
                         .flex_col()
-                        .bg(rgb(0x1C1C20))
+                        .bg(t.theme_color.searchbar_bg)
                         .border_1()
                         .border_color(rgba(0xFFFFFF1A))
                         .rounded(px(12.))
                         .shadow_2xl()
-                        .text_color(rgb(0xF8F8F8))
+                        .text_color(t.theme_color.searchbar_text)
                         .child(
                             div()
                                 .h(px(56.))
@@ -218,7 +222,12 @@ impl Render for Popup {
                                 .text_lg()
                                 .border_b_1()
                                 .border_color(rgba(0xFFFFFF1A))
-                                .child(svg().path("icons/search.svg").size(px(16.)).opacity(0.6))
+                                .child(
+                                    svg()
+                                        .path("icons/search.svg")
+                                        .text_color(t.theme_color.text)
+                                        .size(px(16.)),
+                                )
                                 .child(div().flex_1().child(self.input.clone())),
                         )
                         .child(div().p_2().flex().flex_col().gap_1().children(list)),

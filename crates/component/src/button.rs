@@ -157,21 +157,19 @@ impl RenderOnce for Button {
             .items_center()
             .line_height(relative(1.))
             .when_some(self.label, |this, label| this.aria_label(label))
-            .when(
-                self.focusable && (disabled || focus_handle.is_focused(window)),
-                |this| {
-                    this.track_focus(
-                        &focus_handle
-                            .tab_index(self.tab_index)
-                            .tab_stop(self.tab_stop && !disabled),
-                    )
-                },
-            )
-            .when(disabled, |this| {
-                this.on_mouse_down(MouseButton::Left, |_, _, cx| {
-                    cx.stop_propagation();
-                })
+            .when(self.focusable && !disabled, |this| {
+                this.track_focus(
+                    &focus_handle
+                        .tab_index(self.tab_index)
+                        .tab_stop(self.tab_stop),
+                )
             })
+            .when(disabled, |this| {
+                this.cursor_not_allowed()
+                    .opacity(0.5)
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+            })
+            .when(!disabled, |this| this.cursor_pointer())
             .when_some(
                 (!disabled).then_some(on_click).flatten(),
                 |this, on_click| {

@@ -1,5 +1,5 @@
 pub mod theme_color;
-use gpui::{App, Global, Pixels, SharedString, px, rgb, rgba};
+use gpui::{App, Global, Pixels, SharedString, black, px, rgb, rgba};
 
 use crate::theme::theme_color::ThemeColor;
 
@@ -105,7 +105,7 @@ impl Theme {
                 // search bar
                 searchbar_bg: rgb(0xFBDCE8),
                 searchbar_button: rgb(0xEFA3C3),
-                searchbar_text: rgb(0x4A1F36),
+                searchbar_text: black().into(),
                 searchbar_active: rgba(0xE6458A40),
                 searchbar_hover: rgb(0xF7C4D8),
                 searchbar_selection: rgba(0x3311ff30),
