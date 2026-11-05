@@ -85,6 +85,7 @@ mod mock {
             id: ProfileId::new(),
             pseudonym: pseudonym.to_string(),
             email: None,
+            essential: vec![],
         }
     }
 
