@@ -28,7 +28,7 @@ A repeatable audit workflow for the monas workspace. The output is a prioritized
    - dead code: compiler warnings, underscore-prefixed `pub` fns, unused workspace deps (root `Cargo.toml` vs member manifests)
    - duplicate code: near-identical blocks/functions/element chains → suggest reusing the existing one (name it)
    - memory waste: `.clone()` of large state in render paths, re-allocating callbacks/closures per frame, `to_string()` roundtrips, owned `String` where `&str`/`SharedString` borrow suffices
-   - `#[cfg(target_os)]` gaps — only if a cross-platform decision exists (see Project decisions)
+   - `#[cfg(target_os)]` gaps — only if a cross-platform decision exists (see the design-decisions skill)
    - `TODO` / `FIXME`
    - per-render clones: `.read(cx).clone()` in render paths
    - duplicate type definitions across crates
@@ -50,6 +50,4 @@ Keep it concise: tables over prose. This repo's known hotspots: `crates/ui/src/s
 
 ## Project decisions
 
-Standing decisions that constrain findings — respect them, don't re-litigate:
-
-- **macOS-only** (2026-11-05): do not flag missing `#[cfg(not(target_os = "macos"))]` arms or non-macOS stubs as findings. Only mention them if the human revisits cross-platform support.
+Standing design decisions live in the **design-decisions** skill (`.claude/skills/design-decisions/SKILL.md`, hardlinked across `.agents/` and `.opencode/`). Consult it before categorizing anything as a `bug` — decisions recorded there are intentional and must not be flagged or re-litigated.
