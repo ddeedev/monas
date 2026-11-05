@@ -1,14 +1,13 @@
 use gpui::{
-    App, ClickEvent, Div, ElementId, FocusHandle, Interactivity, IntoElement, MouseButton, Pixels,
-    Rgba, SharedString, Stateful, StyleRefinement, Styled, Window, div, prelude::*, px, relative,
-    rgb, svg,
+    App, Div, ElementId, IntoElement, Rgba, SharedString, Stateful, Window, div, prelude::*, px,
+    rgb,
 };
 
 use crate::theme::ActiveTheme;
 
 #[derive(IntoElement)]
 pub struct WindowControl {
-    grop: SharedString,
+    group: SharedString,
     base: Stateful<Div>,
     idle: Option<Rgba>,
     stroke: Option<Rgba>,
@@ -17,11 +16,12 @@ pub struct WindowControl {
 impl WindowControl {
     pub fn new(id: impl Into<ElementId>) -> Self {
         let id = id.into();
+        let group: SharedString = id.to_string().into();
         Self {
-            base: div().id(id.clone()).group(id.to_string()),
+            base: div().id(id).group(group.clone()),
+            group,
             idle: None,
             stroke: None,
-            grop: id.to_string().into(),
         }
     }
 
@@ -38,20 +38,23 @@ impl WindowControl {
 
 impl RenderOnce for WindowControl {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
-        let t = &cx.theme().clone();
-        let idle = t.theme_color.background;
+        let theme = cx.theme();
+        let hover_border = theme.theme_color.background;
+        let stroke = self.stroke.unwrap_or(theme.theme_color.tile_bg_active);
+        let idle = self.idle;
+        let group = self.group;
 
-        let light = |id: &'static str, hover_color: u32| {
+        let light = move |name: &'static str, hover_color: u32| {
             div()
-                .id(id)
+                .id(SharedString::from(format!("{group}_{name}")))
                 .size(px(16.))
                 .border_1()
-                .border_color(self.stroke.unwrap_or(t.theme_color.tile_bg_active))
+                .border_color(stroke)
                 .rounded_full()
                 .cursor_pointer()
-                .when_some(self.idle, |this, color| this.bg(color))
-                .group_hover(self.grop.clone(), move |s| {
-                    s.bg(rgb(hover_color)).border_color(idle)
+                .when_some(idle, |this, color| this.bg(color))
+                .group_hover(group.clone(), move |s| {
+                    s.bg(rgb(hover_color)).border_color(hover_border)
                 })
         };
 
