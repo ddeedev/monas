@@ -199,7 +199,6 @@ impl Render for MainContent {
             .flex()
             .flex_row()
             .size_full()
-            .bg(theme.theme_color.background)
             .child(current_sidebar)
             .child(
                 div()

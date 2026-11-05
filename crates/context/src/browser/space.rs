@@ -34,12 +34,20 @@ pub struct ProfileContext {
     // user_name// name tag
     pub pseudonym: String,
     pub email: Option<String>,
+    pub essential: Vec<NodeId>,
 }
 
+/// Context of ease space
+/// Folder: collection of bookmark folder can be nested with folder and Pintab
+///bookmark tab
+/// Essential: Quick access to pintab that alway render at the top corner
+/// Node: All available metadata of pintab (folder + pin + essential)
+/// NOTE:: Owner of essential is user profile context,
+/// we must copy that and append to this context
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SidebarContext {
     pub folder: Vec<NodeId>,
-    pub favorites: Vec<NodeId>,
+    pub essential: Vec<NodeId>,
     pub pinned: Vec<NodeId>,
     pub nodes: HashMap<NodeId, Node>,
 }
@@ -65,6 +73,7 @@ impl ProfileContext {
             id: ProfileId::default(),
             pseudonym: name,
             email,
+            essential: vec![],
         }
     }
 }
@@ -73,7 +82,7 @@ impl SidebarContext {
     pub fn new() -> Self {
         Self {
             folder: Vec::new(),
-            favorites: Vec::new(),
+            essential: Vec::new(),
             pinned: Vec::new(),
             nodes: HashMap::new(),
         }
@@ -89,8 +98,8 @@ impl SidebarContext {
         self
     }
 
-    pub fn with_favorite(mut self, favorites: Vec<NodeId>) -> Self {
-        self.favorites = favorites;
+    pub fn with_essential(mut self, essential: Vec<NodeId>) -> Self {
+        self.essential = essential;
         self
     }
 
@@ -99,12 +108,12 @@ impl SidebarContext {
         self
     }
 
-    pub fn new_sidebar(favorites: Vec<NodeId>, folders: Vec<NodeId>, all: Vec<Node>) -> Self {
+    pub fn new_sidebar(essential: Vec<NodeId>, folders: Vec<NodeId>, all: Vec<Node>) -> Self {
         let nodes = all.into_iter().map(|n| (n.id.clone(), n)).collect();
 
         Self::new()
             .with_nodes(nodes)
-            .with_favorite(favorites)
+            .with_essential(essential)
             .with_folder(folders)
     }
 

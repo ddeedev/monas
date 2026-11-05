@@ -84,11 +84,11 @@ impl RenderOnce for AppSidebar {
 
         let on_toggle = self.on_toggle.take();
         let header = self.render_header_with_toggle(on_toggle, &theme);
-        let space_name: SharedString = self.space_name.to_string().into();
-        let mut fav_tabs: Vec<&TabData> = Vec::new();
+        let space_name: SharedString = self.space_name.clone();
+        let mut essential: Vec<&TabData> = Vec::new();
         let space = self.entity.read(cx);
 
-        for item in &space.favorites {
+        for item in &space.essential {
             let node = space.nodes.get(item);
             if let Some(node_data) = node
                 && let NodeData::Tab {
@@ -96,7 +96,7 @@ impl RenderOnce for AppSidebar {
                     open: _,
                 } = &node_data.data
             {
-                fav_tabs.push(item);
+                essential.push(item);
             }
         }
 
@@ -122,8 +122,8 @@ impl RenderOnce for AppSidebar {
                     .mr_1()
                     .gap_2()
                     .child(search)
-                    .child(self.render_essential(fav_tabs))
-                    .child(self.render_workspace_card(space_name.as_str(), &theme))
+                    .child(self.render_essential(essential))
+                    .child(self.render_workspace_card(space_name, None, &theme))
                     .child(
                         div()
                             .text_size(theme.folder_font_size)
@@ -206,7 +206,12 @@ impl AppSidebar {
             )
     }
 
-    fn render_workspace_card(&self, workspace_name: &str, t: &Theme) -> impl IntoElement {
+    fn render_workspace_card(
+        &self,
+        workspace_name: SharedString,
+        icon: Option<SharedString>,
+        t: &Theme,
+    ) -> impl IntoElement {
         let (text, bg, tile, space_name_font) = (
             t.theme_color.text,
             t.theme_color.background,
@@ -227,10 +232,11 @@ impl AppSidebar {
             .text_color(text)
             .opacity(0.5)
             .font_family(space_name_font)
-            .child(div().child("⭐"))
+            .when_some(icon, |this, emo| this.child(div().child(emo)))
+            //.child(div().child("⭐"))
             .child(
                 div()
-                    .child(workspace_name.to_string())
+                    .child(workspace_name)
                     .font_weight(gpui::FontWeight::EXTRA_BOLD),
             )
     }

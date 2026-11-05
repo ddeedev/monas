@@ -4,7 +4,7 @@ use gpui::{App, Menu, MenuItem, SystemMenuType};
 pub fn init_app_menu(cx: &mut App) {
     cx.set_menus(vec![
         Menu {
-            name: "Silly".into(),
+            name: "Monas".into(),
             disabled: false,
             items: vec![
                 MenuItem::os_submenu("Services", SystemMenuType::Services),

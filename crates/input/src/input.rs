@@ -788,7 +788,7 @@ impl Element for TextElement {
         if let Some(selection) = prepaint.selection.take() {
             window.paint_quad(selection)
         }
-        let line = prepaint.line.take().unwrap();
+        let line = prepaint.line.take().unwrap_or_default();
         line.paint(
             bounds.origin,
             window.line_height(),

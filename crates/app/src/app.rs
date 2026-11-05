@@ -50,7 +50,7 @@ impl AppRunner {
             };
 
             cx.open_window(window_option, |_window, cx| cx.new(MainContent::new))
-                .unwrap();
+                .expect("Fail to open main window");
             cx.activate(true);
         });
     }
