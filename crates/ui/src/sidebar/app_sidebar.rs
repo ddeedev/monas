@@ -2,6 +2,7 @@ use crate::Theme;
 use crate::search::SearchBar;
 use component::list_row::ListRow;
 use component::tile::Tile;
+use component::window_control::WindowControl;
 use component::{button::Button, favicon::Favicon};
 
 use action::SwitchSpace;
@@ -166,44 +167,8 @@ impl AppSidebar {
             .justify_between()
             .pb_2()
             // NOTE: 1.2 Enable custom traffic light
-            .child(self.render_traffic_lights(t))
+            .child(WindowControl::new("main-traffic-lights").idle(t.theme_color.background))
             .child(toggle_btn)
-    }
-
-    // TODO:: add traffic light icon [cross,expand,hyphen]
-    fn render_traffic_lights(&self, t: &Theme) -> impl IntoElement {
-        const GROUP: &str = "traffic-lights";
-        let idle = t.theme_color.background;
-
-        let light = |id: &'static str, hover_color: u32| {
-            div()
-                .id(id)
-                .size(px(16.))
-                .border_1()
-                .border_color(t.theme_color.tile_bg_active)
-                .rounded_full()
-                .cursor_pointer()
-                .bg(idle)
-                .group_hover(GROUP, move |s| s.bg(rgb(hover_color)).border_color(idle))
-        };
-
-        div()
-            .group(GROUP)
-            .flex()
-            .items_center()
-            .gap_2()
-            .pl_3()
-            .child(
-                light("traffic-light-close", 0xFF5F57)
-                    .on_click(|_, window, _| window.remove_window()),
-            )
-            .child(
-                light("traffic-light-minimize", 0xFEBC2E)
-                    .on_click(|_, window, _| window.minimize_window()),
-            )
-            .child(
-                light("traffic-light-zoom", 0x28C840).on_click(|_, window, _| window.zoom_window()),
-            )
     }
 
     fn render_workspace_card(

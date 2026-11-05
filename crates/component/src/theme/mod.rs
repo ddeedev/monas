@@ -62,6 +62,7 @@ impl Theme {
             },
         }
     }
+
     pub fn pink() -> Self {
         Self {
             font_family: "SYSTEM_UI_FONT".into(),

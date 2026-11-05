@@ -119,6 +119,23 @@ impl Button {
         self
     }
 
+    /// Returns the `FocusHandle` this button should use.
+    ///
+    /// Two sources, in priority order:
+    /// 1. A handle the caller passed in via `.track_focus(&handle)`. Use this when
+    ///    the parent needs to control focus (call `handle.focus(window)`, check
+    ///    `handle.is_focused(window)`, etc.).
+    /// 2. Otherwise, a handle the button owns itself.
+    ///
+    /// Why `use_keyed_state`: `RenderOnce` components are rebuilt every frame, so
+    /// calling `cx.focus_handle()` directly in `render` would create a brand new
+    /// handle each frame and focus would be lost on every re-render.
+    /// `use_keyed_state` stores the handle in a state entity keyed by `self.id`,
+    /// so the same handle is returned on every frame as long as the button keeps
+    /// being rendered with the same id.
+    ///
+    /// NOTE: this means the id must be stable and unique among siblings, or two
+    /// buttons will end up sharing one focus handle.
     fn focus_handle(&self, window: &mut Window, cx: &mut App) -> FocusHandle {
         self.provided_focus_handle.clone().unwrap_or_else(|| {
             window
@@ -157,6 +174,14 @@ impl RenderOnce for Button {
             .items_center()
             .line_height(relative(1.))
             .when_some(self.label, |this, label| this.aria_label(label))
+            // FOCUS: only register this element as focusable when it is both
+            // focusable and enabled.
+            //  - `tab_index` / `tab_stop` configure the handle: its position in the
+            //    Tab order and whether Tab stops on it at all.
+            //  - `track_focus` attaches the handle to this element, which puts it in
+            //    the window's dispatch tree. That is what enables Tab navigation,
+            //    click-to-focus and `is_focused`.
+            //  - A disabled button is never tracked, so it can't receive focus.
             .when(self.focusable && !disabled, |this| {
                 this.track_focus(
                     &focus_handle
@@ -164,12 +189,22 @@ impl RenderOnce for Button {
                         .tab_stop(self.tab_stop),
                 )
             })
+            // DISABLED look and behavior:
+            //  - "not allowed" cursor and dimmed opacity as visual feedback.
+            //  - Swallow left mouse-down so it doesn't bubble to a parent that has
+            //    its own mouse handler (e.g. a draggable row).
             .when(disabled, |this| {
                 this.cursor_not_allowed()
                     .opacity(0.5)
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             })
             .when(!disabled, |this| this.cursor_pointer())
+            // CLICK: attach the handler only if the button is enabled AND one was set.
+            //  - `(!disabled).then_some(on_click)` -> Option<Option<OnClick>>
+            //    (Some(on_click) if enabled, None if disabled)
+            //  - `.flatten()` -> Option<OnClick>
+            //  - `when_some` then only runs if a handler exists, so a disabled
+            //    button never gets a click handler.
             .when_some(
                 (!disabled).then_some(on_click).flatten(),
                 |this, on_click| {

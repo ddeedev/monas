@@ -1,13 +1,14 @@
 use crate::theme::ActiveTheme;
 use gpui::{
-    AnyElement, App, ClickEvent, ElementId, FontWeight, SharedString, Window, div, prelude::*, px,
+    AnyElement, App, ClickEvent, Div, ElementId, FontWeight, SharedString, Stateful,
+    StyleRefinement, Window, div, prelude::*, px,
 };
 
 type OnClick = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
 pub struct ListRow {
-    id: ElementId,
+    base: Stateful<Div>,
     label: SharedString,
     depth: usize,
     active: bool,
@@ -17,8 +18,9 @@ pub struct ListRow {
 
 impl ListRow {
     pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Self {
+        let id = id.into();
         Self {
-            id: id.into(),
+            base: div().id(id.clone()),
             label: label.into(),
             depth: 0,
             active: false,
@@ -44,6 +46,12 @@ impl ListRow {
     }
 }
 
+impl Styled for ListRow {
+    fn style(&mut self) -> &mut StyleRefinement {
+        self.base.style()
+    }
+}
+
 impl RenderOnce for ListRow {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
@@ -55,8 +63,7 @@ impl RenderOnce for ListRow {
         let font_size = theme.folder_font_size;
         let indent = 8.0 + self.depth as f32 * 8.0;
 
-        div()
-            .id(self.id)
+        self.base
             .h(px(40.))
             .flex()
             .flex_row()
