@@ -5,7 +5,7 @@ publish.workspace = true
 edition.workspace = true
 
 [lib]
-path = "src/component.rs"
+path = "src/lib.rs"
 
 [dependencies]
 assets.workspace = true
