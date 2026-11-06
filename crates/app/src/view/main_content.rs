@@ -60,11 +60,11 @@ impl MainContent {
         }
     }
 
-    fn build_space(cx: &mut Context<Self>, mut ctx: SpaceContext) -> SpaceContent {
-        let name: SharedString = ctx.name.clone().into();
-        let number = ctx.number;
+    fn build_space(cx: &mut Context<Self>, mut space_ctx: SpaceContext) -> SpaceContent {
+        let name: SharedString = space_ctx.name.clone().into();
+        let number = space_ctx.number;
 
-        let sidebar_ctx = std::mem::replace(&mut ctx.sidebar, SidebarContext::new());
+        let sidebar_ctx = std::mem::replace(&mut space_ctx.sidebar, SidebarContext::new());
         let sidebar_entity = cx.new(|_| sidebar_ctx);
         cx.observe(&sidebar_entity, |_, _, cx| cx.notify()).detach();
 
@@ -81,7 +81,7 @@ impl MainContent {
         //})
         //.detach();
 
-        let space = cx.new(|_| ctx);
+        let space = cx.new(|_| space_ctx);
         cx.observe(&space, |_, _, cx| cx.notify()).detach();
 
         let popup_text = cx.new(|cx| TextInput::new("", cx));
