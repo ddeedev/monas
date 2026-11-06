@@ -149,6 +149,7 @@ impl AppSidebar {
         let toggle_btn = Button::new("sidebar-toggle")
             .w(px(30.0))
             .h(px(28.0))
+            .focusable(false)
             .rounded(px(6.0))
             .cursor_pointer()
             .opacity(0.8)
