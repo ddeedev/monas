@@ -21,7 +21,6 @@ pub struct MainContent {
     pub spaces: Vec<SpaceContent>,
     pub space_logos: Vec<String>,
     pub focus_handle: FocusHandle,
-    focused: bool,
 }
 
 impl MainContent {
@@ -58,7 +57,6 @@ impl MainContent {
             spaces,
             focus_handle: cx.focus_handle(),
             space_logos: logos,
-            focused: false,
         }
     }
 
@@ -72,25 +70,33 @@ impl MainContent {
 
         let search_input = cx.new(|cx| TextInput::new("Search or Enter URL...", cx));
         let sidebar = cx.new(|_| SidebarView::new(name, number, sidebar_entity, search_input));
+        //cx.subscribe(&sidebar, |_, dock, event: &SidebarEvent, cx| {
+        //    match event {
+        //        SidebarEvent::Toggle => {
+        //            dock.update(cx, |dock, cx| dock.toggle(cx));
+        //        }
+        //        SidebarEvent::Search(_data) => {}
+        //    }
+        //    cx.notify();
+        //})
+        //.detach();
 
         let space = cx.new(|_| ctx);
         cx.observe(&space, |_, _, cx| cx.notify()).detach();
 
         let popup_text = cx.new(|cx| TextInput::new("", cx));
-        let popup = cx.new(|cx| Popup::new(popup_text, vec![], cx));
+        let popup = cx.new(|cx| Popup::new(popup_text, vec![], false, cx));
 
-        cx.subscribe(&popup, |this, popup, event: &PopupEvent, cx| {
+        cx.subscribe(&popup, |_, popup, event: &PopupEvent, cx| {
             match event {
-                PopupEvent::Dismiss => {}
-                PopupEvent::Open(_data) => {
-                    // TODO: switch to the tab for `_data`
+                PopupEvent::Dismiss => {
+                    popup.update(cx, |p, cx| p.close(cx));
                 }
+                PopupEvent::Open(_data) => {}
                 PopupEvent::Search(_text) => {
                     // TODO: run a search / navigate with `_text`
                 }
             }
-            popup.update(cx, |p, cx| p.close(cx));
-            this.focused = false;
             cx.notify();
         })
         .detach();
@@ -160,10 +166,15 @@ impl Focusable for MainContent {
 
 impl Render for MainContent {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if !self.focused {
-            window.focus(&self.focus_handle, cx);
-            self.focused = true;
+        let handle = self.focus_handle.clone();
+        if !handle.contains_focused(window, cx) {
+            window.focus(&handle, cx);
         }
+        window.on_next_frame(move |window, cx| {
+            if !handle.contains_focused(window, cx) {
+                window.focus(&handle, cx);
+            }
+        });
 
         // sidebar
         let current_sidebar = self.current_sidebar();

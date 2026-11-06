@@ -1,3 +1,5 @@
+// FIX: MOVE THIS TO Main crate
+// this is view not ui component
 pub mod app_sidebar;
 pub mod event;
 pub mod util;
@@ -16,6 +18,7 @@ use std::rc::Rc;
 
 pub enum SidebarEvent {
     Search(SharedString),
+    Toggle,
 }
 impl gpui::EventEmitter<SidebarEvent> for SidebarView {}
 

@@ -19,6 +19,7 @@ impl EventEmitter<PopupEvent> for Popup {}
 pub struct Popup {
     pub input: Entity<TextInput>,
     pub items: Vec<BrowserData>,
+    pub reset_after_dismiss: bool,
     selected: usize,
     visible: bool,
 }
@@ -31,11 +32,17 @@ impl Popup {
             KeyBinding::new("down", SelectNext, ctx),
             KeyBinding::new("ctrl-p", SelectPrev, ctx),
             KeyBinding::new("ctrl-n", SelectNext, ctx),
+            KeyBinding::new("cmd-t", Dismiss, ctx),
             KeyBinding::new("escape", Dismiss, ctx),
         ]);
     }
 
-    pub fn new(input: Entity<TextInput>, items: Vec<BrowserData>, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        input: Entity<TextInput>,
+        items: Vec<BrowserData>,
+        reset_after_dismiss: bool,
+        cx: &mut Context<Self>,
+    ) -> Self {
         cx.observe(&input, |this, _, cx| {
             this.selected = 0;
             cx.notify();
@@ -44,6 +51,7 @@ impl Popup {
         Self {
             input,
             items,
+            reset_after_dismiss,
             selected: 0,
             visible: false,
         }
@@ -73,7 +81,9 @@ impl Popup {
         })
         .detach();
         let focus_handle = self.input.read(cx).focus_handle.clone();
-        window.focus(&focus_handle, cx);
+        if !focus_handle.contains_focused(window, cx) {
+            window.focus(&focus_handle, cx);
+        }
     }
 
     fn filtered(&self, cx: &App) -> Vec<BrowserData> {
@@ -102,6 +112,9 @@ impl Popup {
     }
 
     fn dismiss(&mut self, _: &Dismiss, _: &mut Window, cx: &mut Context<Self>) {
+        if self.reset_after_dismiss {
+            self.input.update(cx, |this, _| this.reset());
+        }
         cx.emit(PopupEvent::Dismiss);
     }
 
@@ -120,10 +133,12 @@ impl Popup {
 }
 
 impl Render for Popup {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if !self.visible {
             return div().into_any_element();
         }
+
+        self.focus(window, cx);
 
         let t = cx.theme().clone();
 
