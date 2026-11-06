@@ -152,7 +152,7 @@ Application
 - Subscribes to `PopupEvent` — every event closes the popup; the `Open`/`Search` handlers are TODO stubs.
 - **Focus safety net:** `render` re-focuses `self.focus_handle` whenever `contains_focused` fails, so scoped `main_view` keybindings survive any focused element being unmounted (hidden sidebar, space switch, popup close). This is the fix pattern for the orphaned-focus bug class: a focused element that leaves the tree drops the context stack to the dispatch-tree root, and scoped bindings stop matching until focus returns to a live node.
 
-Focus rules to remember when adding UI here: elements with `track_focus` (incl. `Button`, which is focusable by default) steal focus on mousedown; parents render before children in a frame, and `contains_focused` reads the *last rendered* frame — so a parent's render-time focus steal beats a child that mounts and focuses in the same frame (modals must claim focus in their own `render` while visible).
+Focus rules to remember when adding UI here: elements with `track_focus` (incl. `Button`, which is focusable by default) steal focus on mousedown; parents render before children in a frame, and `contains_focused` reads the _last rendered_ frame — so a parent's render-time focus steal beats a child that mounts and focuses in the same frame (modals must claim focus in their own `render` while visible).
 
 ### Actions and key bindings (`crates/action`)
 
@@ -232,8 +232,7 @@ Nearly zero coverage — the only test is a cargo-new template leftover (`crates
 ## Branches
 
 - `main`: default branch on remote.
-- `develop`: integration branch; Zola site deploys from here.
-- Feature branches may exist locally (e.g. `vibe`).
+- `develop`: integration branch.
 
 ## Important gotchas
 
