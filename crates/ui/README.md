@@ -3,13 +3,12 @@
 Domain-aware GPUI views for **monas**: the sidebar, the `cmd-t` search popup,
 the search bar, and macOS platform helpers.
 
-> **Project motto:** a crate boundary earns its cost when it turns a rule you
-> care about into a compiler error. Here the rule is: widgets don't know the
-> domain; feature views do; the app crate is the composition root.
+> Here the rule is: widgets don't know the domain;
+> feature views do; the app crate is the composition root.
 
 ## The rule
 
-**Feature views *do* know the domain.** This crate may depend on `context`
+**Feature views _do_ know the domain.** This crate may depend on `context`
 (domain model), `action`, and `input`, and composes the domain-agnostic widgets
 from `crates/component`. It must **not** depend on `crates/app` — the app crate
 is the composition root and sits above everything. Keep it thin: it wires

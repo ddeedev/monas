@@ -1,5 +1,3 @@
-// FIX: MOVE THIS TO Main crate
-// this is view not ui component
 pub mod app_sidebar;
 pub mod event;
 pub mod util;
@@ -9,7 +7,9 @@ use app_sidebar::AppSidebar;
 use event::SidebarResizeDrag;
 
 use context::space::SidebarContext;
-use gpui::{App, Entity, IntoElement, SharedString, Window, deferred, div, prelude::*, px};
+use gpui::{
+    App, ClickEvent, Entity, IntoElement, SharedString, Window, deferred, div, prelude::*, px,
+};
 use std::{fmt::Debug, time::Duration};
 
 use crate::ActiveTheme;
@@ -22,7 +22,8 @@ pub enum SidebarEvent {
 }
 impl gpui::EventEmitter<SidebarEvent> for SidebarView {}
 
-type OnSearch = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
+pub type OnSearch = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
+pub type ToggleHadler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(Debug, Clone)]
 pub struct SidebarView {
@@ -181,19 +182,21 @@ impl SidebarView {
     }
 }
 
+/// UI + Sidebar Domain
+/// Disable Native traffic light (WindowControl)
+/// Replace Native traffic light with Own built WindowControl
 impl Render for SidebarView {
     fn render(&mut self, window: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
-        // NOTE: 1 @ddeedev
-        // 1.1 Disable native traffic light
-        // Then using custom traffic light later
+        // Disable Native traffic light here
         set_traffic_lights_hidden(window, true);
 
-        let toggle = cx.listener(|this, _: &gpui::ClickEvent, _window, cx| this.toggle(cx));
+        let toggle =
+            Rc::new(cx.listener(|this, _: &gpui::ClickEvent, _window, cx| this.toggle(cx)));
 
-        let toggle_floating = cx.listener(|this, _: &gpui::ClickEvent, _window, cx| {
+        let toggle_floating = Rc::new(cx.listener(|this, _: &gpui::ClickEvent, _window, cx| {
             this.hide_floating_immediately(cx);
             this.show_docked_immediately(cx);
-        });
+        }));
 
         let show_floating = cx.listener(|this, _: &gpui::MouseMoveEvent, _window, cx| {
             if this.hidden {
@@ -253,14 +256,9 @@ impl Render for SidebarView {
                                 self.space_logos.clone(),
                                 self.search_input.clone(),
                             )
-                            .on_search({
-                                let f = on_search.clone();
-                                move |q, w, cx| f(q, w, cx)
-                            })
+                            .on_search(on_search.clone())
                             .width(self.width)
-                            .toggle_sidebar(move |_, window, cx| {
-                                toggle(&gpui::ClickEvent::default(), window, cx);
-                            }),
+                            .toggle_sidebar(toggle),
                         ),
                 )
                 // drag bar appear when mouse hover at most right of sidebar
@@ -312,20 +310,9 @@ impl Render for SidebarView {
                                             self.space_logos.clone(),
                                             self.search_input.clone(),
                                         )
-                                        .on_search({
-                                            let f = on_search.clone();
-                                            move |q, w, cx| f(q, w, cx)
-                                        })
+                                        .on_search(on_search.clone())
                                         .width(self.width)
-                                        .toggle_sidebar(
-                                            move |_, window, cx| {
-                                                toggle_floating(
-                                                    &gpui::ClickEvent::default(),
-                                                    window,
-                                                    cx,
-                                                );
-                                            },
-                                        ),
+                                        .toggle_sidebar(toggle_floating),
                                     ),
                             )
                         },

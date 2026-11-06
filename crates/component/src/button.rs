@@ -3,8 +3,9 @@ use gpui::{
     Rgba, SharedString, Stateful, StyleRefinement, Styled, Window, div, prelude::*, px, relative,
     rgb, svg,
 };
+use std::rc::Rc;
 
-type OnClick = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
+type OnClick = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 // DEFAULT VALUE
 /// ICON
@@ -100,7 +101,7 @@ impl Button {
     }
 
     pub fn on_click(mut self, f: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
-        self.on_click = Some(Box::new(f));
+        self.on_click = Some(Rc::new(f));
         self
     }
 
@@ -227,5 +228,157 @@ impl RenderOnce for Button {
                 )
             })
             .when_some(self.label, |this, label| this.child(label))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use gpui::{
+        ClickEvent, Context, FocusHandle, KeyDownEvent, KeyUpEvent, Keystroke, Modifiers,
+        ParentElement, Render, Styled, TestAppContext, VisualTestContext, div, point,
+    };
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    struct ButtonHarness {
+        disabled: bool,
+        focus: FocusHandle,
+        click: Rc<Cell<usize>>,
+        keyboard_event: Rc<Cell<usize>>,
+    }
+
+    impl ButtonHarness {
+        fn new(
+            disabled: bool,
+            click: Rc<Cell<usize>>,
+            keyboard_event: Rc<Cell<usize>>,
+            cx: &mut Context<Self>,
+        ) -> Self {
+            Self {
+                disabled,
+                focus: cx.focus_handle(),
+                click,
+                keyboard_event,
+            }
+        }
+    }
+
+    impl Render for ButtonHarness {
+        fn render(
+            &mut self,
+            _: &mut gpui::Window,
+            _: &mut gpui::prelude::Context<Self>,
+        ) -> impl gpui::prelude::IntoElement {
+            let click = self.click.clone();
+            let keyboard = self.keyboard_event.clone();
+
+            div().size_full().child(
+                Button::new("test-btn")
+                    .w(px(20.))
+                    .h(px(20.))
+                    .track_focus(&self.focus)
+                    .disabled(self.disabled)
+                    .on_click(move |event, _, _| {
+                        click.set(click.get() + 1);
+                        if matches!(event, ClickEvent::Keyboard(_)) {
+                            keyboard.set(keyboard.get() + 1);
+                        }
+                    }),
+            )
+        }
+    }
+
+    struct SetupResult<'a> {
+        view: gpui::Entity<ButtonHarness>,
+        vcx: &'a mut VisualTestContext,
+        click: Rc<Cell<usize>>,
+        keyboard: Rc<Cell<usize>>,
+    }
+
+    fn setup(cx: &mut TestAppContext, disabled: bool) -> SetupResult<'_> {
+        let click = Rc::new(Cell::new(0));
+        let keyboard = Rc::new(Cell::new(0));
+        let (c, k) = (click.clone(), keyboard.clone());
+        let (view, vcx) = cx.add_window_view(move |_, cx| ButtonHarness::new(disabled, c, k, cx));
+        vcx.run_until_parked();
+        SetupResult {
+            view,
+            vcx,
+            click,
+            keyboard,
+        }
+    }
+
+    #[gpui::test]
+    fn click_fires_handler(cx: &mut TestAppContext) {
+        let SetupResult {
+            vcx,
+            click,
+            keyboard,
+            ..
+        } = setup(cx, false);
+
+        vcx.simulate_click(point(px(10.), px(10.)), Modifiers::default());
+
+        assert_eq!(click.get(), 1);
+        assert_eq!(keyboard.get(), 0);
+    }
+
+    #[gpui::test]
+    fn disabled_click_does_nothing(cx: &mut TestAppContext) {
+        let SetupResult { vcx, click, .. } = setup(cx, true);
+
+        vcx.simulate_click(point(px(10.), px(10.)), Modifiers::default());
+
+        assert_eq!(click.get(), 0);
+    }
+
+    #[gpui::test]
+    fn click_focuses_button(cx: &mut TestAppContext) {
+        let SetupResult { view, vcx, .. } = setup(cx, false);
+
+        vcx.simulate_click(point(px(10.), px(10.)), Modifiers::default());
+
+        let focus = view.read_with(vcx, |v, _| v.focus.clone());
+        assert!(vcx.update(|window, _| focus.is_focused(window)));
+    }
+
+    #[gpui::test]
+    fn enter_activates_focused_button(cx: &mut TestAppContext) {
+        let SetupResult {
+            view,
+            vcx,
+            click,
+            keyboard,
+        } = setup(cx, false);
+
+        let focus = view.read_with(vcx, |v, _| v.focus.clone());
+        vcx.update(|window, cx| window.focus(&focus, cx));
+        let keystroke =
+            vcx.update(|_, cx| Keystroke::parse_with_os("enter", cx.platform_info().os).unwrap());
+        vcx.simulate_event(KeyDownEvent {
+            keystroke: keystroke.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        vcx.simulate_event(KeyUpEvent { keystroke });
+        vcx.run_until_parked();
+
+        assert_eq!(click.get(), 1);
+        assert_eq!(keyboard.get(), 1);
+    }
+
+    #[gpui::test]
+    fn disabled_ignores_enter(cx: &mut TestAppContext) {
+        let SetupResult {
+            view, vcx, click, ..
+        } = setup(cx, false);
+
+        let focus = view.read_with(vcx, |v, _| v.focus.clone());
+        vcx.update(|window, cx| window.focus(&focus, cx));
+        vcx.simulate_keystrokes("enter");
+
+        assert_eq!(click.get(), 0);
     }
 }

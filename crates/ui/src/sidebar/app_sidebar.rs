@@ -1,5 +1,6 @@
 use crate::Theme;
-use crate::search::SearchBar;
+use crate::search::{OnSearch, SearchBar};
+use crate::sidebar::ToggleHadler;
 use component::list_row::ListRow;
 use component::tile::Tile;
 use component::window_control::WindowControl;
@@ -12,16 +13,12 @@ use context::{
     space::SidebarContext,
 };
 use gpui::{
-    AnyElement, App, ClickEvent, Entity, IntoElement, Rgba, SharedString, Window, div, prelude::*,
-    px, svg, white,
+    AnyElement, App, Entity, IntoElement, Rgba, SharedString, Window, div, prelude::*, px, svg,
+    white,
 };
 
 use crate::ActiveTheme;
 use input::TextInput;
-use std::rc::Rc;
-
-type OnSearch = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
-type ToggleHadler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
 pub struct AppSidebar {
@@ -55,8 +52,8 @@ impl AppSidebar {
         }
     }
 
-    pub fn on_search(mut self, f: impl Fn(&SharedString, &mut Window, &mut App) + 'static) -> Self {
-        self.on_search = Some(Rc::new(f));
+    pub fn on_search(mut self, f: OnSearch) -> Self {
+        self.on_search = Some(f);
         self
     }
 
@@ -65,76 +62,9 @@ impl AppSidebar {
         self
     }
 
-    pub fn toggle_sidebar(
-        mut self,
-        f: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    ) -> Self {
-        self.on_toggle = Some(Box::new(f));
+    pub fn toggle_sidebar(mut self, f: ToggleHadler) -> Self {
+        self.on_toggle = Some(f);
         self
-    }
-}
-
-impl RenderOnce for AppSidebar {
-    fn render(mut self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let theme = cx.theme().clone();
-
-        let mut search = SearchBar::new(self.search_input.clone());
-        if let Some(f) = self.on_search.take() {
-            search = search.on_search(move |q, w, cx| f(q, w, cx));
-        }
-
-        let on_toggle = self.on_toggle.take();
-        let header = self.render_header_with_toggle(on_toggle, &theme);
-        let space_name: SharedString = self.space_name.clone();
-        let mut essential: Vec<&TabData> = Vec::new();
-        let space = self.entity.read(cx);
-
-        for item in &space.essential {
-            let node = space.nodes.get(item);
-            if let Some(node_data) = node
-                && let NodeData::Tab {
-                    data: item,
-                    open: _,
-                } = &node_data.data
-            {
-                essential.push(item);
-            }
-        }
-
-        let folder = space.folder.clone();
-
-        div()
-            .w(px(self.width))
-            .flex_shrink_0()
-            .h_full()
-            .bg(theme.theme_color.background)
-            .font_family(theme.font_family.clone())
-            .text_size(theme.font_size)
-            .text_color(theme.theme_color.text)
-            .flex()
-            .flex_col()
-            .child(header)
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .flex_1()
-                    .m_2()
-                    .mr_1()
-                    .gap_2()
-                    .child(search)
-                    .child(self.render_essential(essential))
-                    .child(self.render_workspace_card(space_name, None, &theme))
-                    .child(
-                        div()
-                            .text_size(theme.folder_font_size)
-                            .font_family(theme.folder_font.clone())
-                            .gap_2()
-                            .flex_1()
-                            .children(folder.iter().map(|f| self.render_node(space, f, 0, &theme))),
-                    )
-                    .child(self.render_space_selection(&theme)),
-            )
     }
 }
 
@@ -158,7 +88,9 @@ impl AppSidebar {
             .icon_w(px(18.))
             .icon_color(outline)
             .hover(move |style| style.bg(hover))
-            .when_some(on_toggle, move |btn, f| btn.on_click(f));
+            .when_some(on_toggle, move |btn, f| {
+                btn.on_click(move |event, window, cx| f(event, window, cx))
+            });
 
         div()
             .mt_2()
@@ -405,4 +337,68 @@ fn folder_icon(expand: bool, fill: Rgba, stroke: Rgba) -> impl IntoElement {
                 .size(px(25.))
                 .text_color(stroke),
         )
+}
+
+impl RenderOnce for AppSidebar {
+    fn render(mut self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = cx.theme().clone();
+
+        let mut search = SearchBar::new(self.search_input.clone());
+        if let Some(f) = self.on_search.take() {
+            search = search.on_search(f);
+        }
+
+        let on_toggle = self.on_toggle.take();
+        let header = self.render_header_with_toggle(on_toggle, &theme);
+        let space_name: SharedString = self.space_name.clone();
+        let mut essential: Vec<&TabData> = Vec::new();
+        let space = self.entity.read(cx);
+
+        for item in &space.essential {
+            let node = space.nodes.get(item);
+            if let Some(node_data) = node
+                && let NodeData::Tab {
+                    data: item,
+                    open: _,
+                } = &node_data.data
+            {
+                essential.push(item);
+            }
+        }
+
+        let folder = space.folder.clone();
+
+        div()
+            .w(px(self.width))
+            .flex_shrink_0()
+            .h_full()
+            .bg(theme.theme_color.background)
+            .font_family(theme.font_family.clone())
+            .text_size(theme.font_size)
+            .text_color(theme.theme_color.text)
+            .flex()
+            .flex_col()
+            .child(header)
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .flex_1()
+                    .m_2()
+                    .mr_1()
+                    .gap_2()
+                    .child(search)
+                    .child(self.render_essential(essential))
+                    .child(self.render_workspace_card(space_name, None, &theme))
+                    .child(
+                        div()
+                            .text_size(theme.folder_font_size)
+                            .font_family(theme.folder_font.clone())
+                            .gap_2()
+                            .flex_1()
+                            .children(folder.iter().map(|f| self.render_node(space, f, 0, &theme))),
+                    )
+                    .child(self.render_space_selection(&theme)),
+            )
+    }
 }

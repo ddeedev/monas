@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use crate::theme::ActiveTheme;
 use gpui::{
     AnyElement, App, ClickEvent, Div, ElementId, FontWeight, SharedString, Stateful,
     StyleRefinement, Window, div, prelude::*, px,
 };
 
-type OnClick = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
+type OnClick = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
 pub struct ListRow {
@@ -41,7 +43,7 @@ impl ListRow {
         self
     }
     pub fn on_click(mut self, f: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
-        self.on_click = Some(Box::new(f));
+        self.on_click = Some(Rc::new(f));
         self
     }
 }
@@ -75,7 +77,9 @@ impl RenderOnce for ListRow {
             .cursor_pointer()
             .when(self.active, move |el| el.bg(active))
             .hover(move |s| s.bg(hover))
-            .when_some(self.on_click, |el, f| el.on_click(f))
+            .when_some(self.on_click, |el, on_click| {
+                el.on_click(move |event, window, cx| on_click(event, window, cx))
+            })
             .when_some(self.leading, |el, leading| {
                 el.child(
                     div()

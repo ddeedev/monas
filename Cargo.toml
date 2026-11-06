@@ -26,7 +26,10 @@ input = { path = "crates/input" }
 component = { path = "crates/component" }
 ui = { path = "crates/ui" }
 anyhow = "1.0.102"
-gpui = { version = "0.2.2", git = "https://github.com/zed-industries/zed" }
+gpui = { version = "0.2.2", git = "https://github.com/zed-industries/zed", features = [
+  "test-support",
+  "bench-support",
+] }
 gpui_platform = { version = "0.1.0", git = "https://github.com/zed-industries/zed", features = [
   "font-kit",
 ] }

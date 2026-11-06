@@ -1,7 +1,6 @@
 use component::TextBox;
 use gpui::{App, Entity, IntoElement, RenderOnce, SharedString, Window, div, prelude::*};
 use input::{Submit, TextInput};
-use std::rc::Rc;
 
 use super::OnSearch;
 
@@ -19,8 +18,8 @@ impl SearchBar {
         }
     }
 
-    pub fn on_search(mut self, f: impl Fn(&SharedString, &mut Window, &mut App) + 'static) -> Self {
-        self.on_search = Some(Rc::new(f));
+    pub fn on_search(mut self, f: OnSearch) -> Self {
+        self.on_search = Some(f);
         self
     }
 }

@@ -11,3 +11,6 @@ path = "src/component.rs"
 assets.workspace = true
 gpui.workspace = true
 input.workspace = true
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support", "bench-support"] }
