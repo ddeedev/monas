@@ -1,177 +1,233 @@
 # AGENTS.md
 
-Guide for AI agents working in the Silly repository.
+Guide for AI agents working in the **monas** repository.
 
 ## Project overview
 
-Silly is a GPU-accelerated desktop application (intended to become a REST client) written in Rust using the [GPUI](https://www.gpui.rs/) UI framework. It is currently in early development (v0.1.0). The repository also contains a small static marketing/documentation site built with [Zola](https://www.getzola.org/) under `page/`.
+**monas** is an Arc-like, macOS-first **web browser** written in Rust using the [GPUI](https://www.gpui.rs/) UI framework. It is in early development (v0.1.0).
 
-The primary codebase is a single Cargo binary crate. The author uses a hobby-style workflow with `main`, `develop`, and feature branches (e.g. `vibe`).
+> **Motto:** a crate boundary earns its cost when it turns a rule you care about into a compiler error. Here the rule is: widgets don't know the domain; feature views do; the app crate is the composition root. Per-crate READMEs (`crates/component/README.md`, `crates/ui/README.md`) document the rule for contributors.
+
+> **Current focus:** this project began as "Silly", a REST API client with Arc-browser-style UX. The author's current focus is building the **browser** — that is where all active work happens. The REST-client feature may return later, so its types (`crates/context/src/api/`, `TabData::ApiRequest`) are kept but dormant. `ROADMAP.md` predates the pivot; treat it as historical.
+
+The codebase is a Rust workspace of eight crates under `crates/`. The author uses a hobby-style workflow with `main`, `develop`.
+
+## AI agent policy: mentor mode by default
+
+This repository is a deliberate learning project. Contributors write their own code — agents working here must act as **mentors, not implementers**. Do not vibe code this project.
+
+Unless the human explicitly opts out in the current session, an agent MUST:
+
+1. **Never write or edit source code** (`crates/`, `page/`, `Cargo.toml`, CI). Reading is always allowed.
+2. **Never paste drop-in implementations** of what the human is building. Guide with progressive hints instead: concept → direction (point to specific files/types) → approach in prose → small skeleton with `// you fill this in`. Escalate only when they remain stuck.
+3. **Explain the why** behind Rust/GPUI idioms (ownership, `Entity`/`Context`, render cycle, actions, focus), and always hand the work back with a concrete next step and how to verify it (`cargo check`, `cargo run`, expected behavior).
+
+**Meta-file exception ("ignore files"):** `AGENTS.md`, `README.md`, and skill files (`.claude/skills/`, `.agents/skills/`, `.opencode/skills/`) may be created or edited by an agent, but only when the human explicitly requests it in the current session.
+
+**Opt-out:** only if the human explicitly confirms they want implementation (e.g. "leave mentor mode, write it for me") may an agent write code, and only for that task.
+
+The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](.claude/skills/mentor/SKILL.md). It is mirrored (hardlinked) into `.agents/skills/mentor/` and `.opencode/skills/mentor/` — one write updates all copies. Load and follow it.
+
+Standing **design decisions** (intentional behavior, never flag as bugs) live in the design-decisions skill: [`.claude/skills/design-decisions/SKILL.md`](.claude/skills/design-decisions/SKILL.md). Consult it before reviewing or flagging findings.
 
 ## Repository structure
 
 ```text
 /
-├── Cargo.toml              # Rust package manifest
+├── Cargo.toml              # Workspace manifest (default member: crates/app)
 ├── Cargo.lock
-├── src/                    # Main Rust application
-│   ├── main.rs             # Entrypoint
-│   ├── app.rs              # AppRunner: application setup, window, key bindings
-│   ├── action.rs           # GPUI action definitions (Quit, ToggleSidebar)
-│   ├── assets.rs           # Embedded asset loading (SVG icons, fonts)
-│   ├── platform.rs         # macOS-specific native helpers (traffic lights)
-│   ├── components/         # Reusable UI components
-│   │   └── sidebar.rs      # Sidebar component with docked/floating/resize behavior
-│   ├── view/               # Top-level view controllers
-│   │   └── main_content.rs # Root view composing Sidebar + main area
-│   └── ui/                 # Reserved module, currently empty
-├── assets/                 # Embedded assets referenced from src/assets.rs
-│   ├── icons/              # SVG icons loaded via gpui::svg().path("icons/...")
-│   └── fonts/              # Bundled TTF fonts (e.g. Pacifico)
-├── page/                   # Zola static site
-│   ├── config.toml
-│   ├── content/
-│   ├── templates/
-│   ├── static/
-│   └── sass/
-├── .github/workflows/      # CI/CD
-│   ├── deploy.yml          # Build macOS release binary and GitHub Release
-│   └── page.yml            # Build & deploy Zola site to gh-pages
-├── README.md               # Basic run instructions
-├── NOTE.md                 # Author note about future monorepo plans
-└── ROADMAP.md              # Feature roadmap and status
+├── crates/                 # Rust workspace members
+│   ├── app/                # Application binary (`monas`)
+│   │   └── src/
+│   │       ├── main.rs     # Entrypoint → AppRunner::run()
+│   │       ├── app.rs      # AppRunner: application, window, startup wiring
+│   │       ├── menu.rs     # macOS application menu (titled "Monas"; View menu wires ToggleSidebar)
+│   │       └── view/
+│   │           ├── mod.rs            # Mock space data (hardcoded in code)
+│   │           ├── main_content.rs   # MainContent: root view, spaces, actions
+│   │           └── space_content.rs  # SpaceContent: per-space entity bundle
+│   ├── action/             # Actions (ToggleSidebar, Quit, CloseTab, ResetSidebar,
+│   │                       # OpenSearchPopup, SwitchSpace) + key bindings
+│   ├── assets/             # Embedded assets (rust_embed SVG icons, fonts)
+│   │   └── src/assets.rs   # Assets AssetSource + FONT_SUPPORT + load_fonts_asset
+│   ├── component/          # Homegrown GPUI widgets + theme (domain-agnostic — see crates/component/README.md)
+│   │   └── src/
+│   │       ├── component.rs        # Crate root
+│   │       ├── theme/mod.rs        # Theme, ActiveTheme, init() (pink preset)
+│   │       ├── theme/theme_color.rs
+│   │       ├── tile.rs, text_box.rs, list_row.rs, favicon.rs
+│   │       ├── button.rs          # Button widget (focusable by default, keyed-state focus handles)
+│   │       ├── window_control.rs  # WindowControl: custom traffic lights (close/minimize/zoom)
+│   ├── context/            # Domain model (no GPUI dependency)
+│   │   └── src/
+│   │       ├── context.rs          # Crate re-exports
+│   │       ├── node.rs             # Node / NodeId tree (Folder | Tab)
+│   │       ├── tabs.rs             # TabData (Browser | ApiRequest)
+│   │       ├── browser/space.rs    # SpaceContext, ProfileContext, SidebarContext
+│   │       ├── browser/tab.rs      # BrowserData, favicon_for (Google s2 service)
+│   │       ├── api/tab.rs          # ApiRequestData (dormant REST client, may return)
+│   │       └── config/             # TOML Config trait (currently unwired/dead)
+│   ├── input/               # Custom text input widget
+│   │   └── src/input.rs     # TextInput entity, TextElement, EntityInputHandler
+│   │                        # (adapted from GPUI's text_input example)
+│   ├── setting/            # User settings crate (placeholder, currently dead code)
+│   │   └── src/setting.rs
+│   └── ui/                  # Larger GPUI views + platform helpers (feature views — see crates/ui/README.md)
+│       └── src/
+│           ├── ui.rs
+│           ├── sidebar/mod.rs       # SidebarView: docked/floating state machine
+│           ├── sidebar/app_sidebar.rs # AppSidebar: RenderOnce row rendering
+│           ├── sidebar/event/mod.rs
+│           ├── search/popup.rs      # Popup: cmd-t search overlay
+│           ├── search/search_bar.rs
+│           └── platform.rs          # macOS traffic-light hiding (objc2)
+├── assets/                 # Assets referenced from crates/assets
+│   ├── icons/              # SVG icons loaded via svg().path("icons/...")
+│   ├── fonts/              # Bundled TTF fonts (6 shipped, 4 in FONT_SUPPORT)
+│   └── mock/               # Mock TOML files (NOT currently embedded — see gotchas)
+├── .github/workflows/      # deploy.yml (release) — currently fully commented out
+├── .claude/skills/         # mentor/ + repo-scan/ + design-decisions/ skills (hardlinked into .agents/ and .opencode/)
+├── .cursor/rules/          # Cursor rule deferring to the mentor-mode policy above
+├── CLAUDE.md               # Imports this file for Claude Code
+├── README.md               # Basic run instructions (skeletal)
+├── NOTE.md                 # Author note
+└── ROADMAP.md              # Pre-pivot roadmap (historical)
 ```
 
 ## Essential commands
 
 ### Rust application
 
+The workspace default member is `crates/app`, so `cargo run` and `cargo build` target the browser app by default. The binary is named `monas`.
+
 ```bash
-# Run the desktop app locally (requires GPUI platform dependencies; see README.md)
+# Run the app locally (requires GPUI platform prerequisites; see README.md)
 cargo run
 
-# Build release binary (macOS-only CI target)
+# Build release binary
 cargo build --release --locked
 ```
 
-There are no configured `cargo test` tests at the time of writing, and no Makefile or custom build scripts.
-
-### Zola site
-
-The site is built and deployed by GitHub Actions. To build locally, install Zola and run from the `page/` directory:
-
-```bash
-zola build
-# or for local preview
-zola serve
-```
+There are very few tests (one cargo-new template leftover in `crates/setting`, plus a WIP test-harness stub in `crates/component/src/button.rs` with no tests yet), no Makefile, and no custom build scripts.
 
 ## Architecture and control flow
 
 ### Entrypoint
 
-`src/main.rs` delegates everything to `app::AppRunner::run()`.
+`crates/app/src/main.rs` delegates everything to `app::AppRunner::run()`.
 
-### Application setup (`src/app.rs`)
+### Application setup (`crates/app/src/app.rs`)
 
 `AppRunner::run()` performs the following:
 
-1. Registers the embedded asset source (`crate::assets::Assets`).
-2. Loads bundled fonts (`load_fonts_asset(cx)`).
-3. Initializes the default `gpui-component` theme (`theme::init(cx)`).
-4. Registers global actions (`Quit`, `ToggleSidebar`) and key bindings:
-   - `cmd-q` → `Quit`
-   - `cmd-s` → `ToggleSidebar` scoped to the `main_view` key context
-5. Opens a normal GPUI window wrapped in `gpui_component::Root`.
-6. Instantiates `MainContent` as the window content.
+1. Builds the `Application` via `gpui_platform::current_platform(false)` + `Application::new_inaccessible`, installing a `reqwest_client::ReqwestClient` HTTP client (user agent `monas/0.1`).
+2. Registers the embedded asset source (`assets::Assets`).
+3. Loads bundled fonts (`assets::load_fonts_asset`).
+4. Initializes the theme (`component::theme::init` — currently the `pink()` preset).
+5. Registers key bindings: `action::register_keybind` (global + `main_view` scope), `input::TextInput::bind_keys` (`TextInput` scope), `ui::search::popup::Popup::bind_keys` (`Popup` scope).
+6. Initializes the macOS application menu (`menu::init_app_menu`).
+7. Registers the `Quit` action handler; quits when the last window closes.
+8. Opens a normal GPUI window with a transparent titlebar and traffic lights positioned at (12, 12), containing `MainContent`.
 
 ### View hierarchy
 
-```
+```text
 Application
- └─ Window
-     └─ Root (from gpui-component)
-         └─ MainContent (src/view/main_content.rs)
-             ├─ Sidebar (src/components/sidebar.rs)
-             │   ├─ docked sidebar area
-             │   ├─ resize handle
-             │   ├─ hover hot-zone (when hidden)
-             │   └─ floating sidebar overlay
-             └─ main content area
+ └─ Window (transparent titlebar)
+     └─ MainContent (crates/app/src/view/main_content.rs)  [.key_context("main_view")]
+         ├─ Vec<SpaceContent> (one per space)
+         │   └─ SpaceContent (space_content.rs)
+         │       ├─ Entity<SpaceContext>      # domain state
+         │       ├─ Entity<SidebarView>      # sidebar UI + animation state
+         │       └─ Entity<Popup>            # cmd-t search overlay
+         ├─ current sidebar (rendered)
+         ├─ main content area (card)         # mouse-move hides floating sidebar
+         └─ current popup (absolute overlay)
 ```
 
-### GPUI patterns used
+`MainContent` is `Focusable` + `Global` (the `Global` impl is currently unused), tracks the 1-based `current_space`, and builds each space in `build_space`:
 
-- **Entities**: Top-level stateful views are GPUI `Entity<T>` values. `MainContent` owns `Entity<Sidebar>` and observes it for changes.
-- **Actions**: User commands are declared with the `actions!` macro in `src/action.rs` and dispatched via `cx.bind_keys`, `on_action`, and `cx.listener`.
-- **Render traits**: Components implement `gpui::Render` or `gpui::RenderOnce` and return `impl IntoElement` built with the fluent GPUI element API (`div()`, `.child(...)`, etc.).
-- **Key contexts**: `MainContent` sets `.key_context("main_view")` so the `cmd-s` shortcut only fires when that view has focus.
-- **Focus**: `MainContent` implements `Focusable` and calls `.track_focus(&self.focus_handle)`.
-- **Async animations**: Animation loops are spawned with `cx.spawn(async move |this, cx| { ... }).detach()` and use `cx.background_executor().timer(...)` to drive frame updates.
+- Moves the `SidebarContext` out of the mock `SpaceContext` into its own entity and observes it (`cx.observe(...).detach()`), so sidebar data changes trigger re-render. (The `Entity<SpaceContext>` itself is observed too, but nothing ever updates it — wiring without a writer until persistence lands.)
+- Creates the `TextInput` entities for the sidebar search field and the popup.
+- Subscribes to `PopupEvent` — every event closes the popup; the `Open`/`Search` handlers are TODO stubs.
+- **Focus safety net:** `render` re-focuses `self.focus_handle` whenever `contains_focused` fails, so scoped `main_view` keybindings survive any focused element being unmounted (hidden sidebar, space switch, popup close). This is the fix pattern for the orphaned-focus bug class: a focused element that leaves the tree drops the context stack to the dispatch-tree root, and scoped bindings stop matching until focus returns to a live node.
 
-### Sidebar state machine
+Focus rules to remember when adding UI here: elements with `track_focus` (incl. `Button`, which is focusable by default) steal focus on mousedown; parents render before children in a frame, and `contains_focused` reads the *last rendered* frame — so a parent's render-time focus steal beats a child that mounts and focuses in the same frame (modals must claim focus in their own `render` while visible).
 
-The sidebar in `src/components/sidebar.rs` has two related states:
+### Actions and key bindings (`crates/action`)
 
-- **Docked**: open or closed with animated `width_anim`.
-- **Floating**: appears when the window is in hidden-docked mode and the user hovers the left edge. Driven by `floating_visible` and `floating_progress`.
+Declared with `actions!(app, [ToggleSidebar, Quit, CloseTab, ResetSidebar, OpenSearchPopup])` plus the custom `SwitchSpace(usize)` action. Bindings:
 
-Important transition rule (in `Sidebar::toggle`):
+- `cmd-q` → `Quit` (global)
+- `cmd-w` → `CloseTab` in `main_view` (**no handler exists yet** — pressing it does nothing)
+- `cmd-s` → `ToggleSidebar` in `main_view`
+- `ctrl-0` → `ResetSidebar` (global)
+- `ctrl-1/2/3` → `SwitchSpace(n)` (global)
+- `cmd-t` → `OpenSearchPopup` (global)
 
-- If the floating sidebar is currently visible while the docked sidebar is hidden, toggling restores the docked sidebar immediately without playing the floating slide-out.
-- Otherwise it toggles the docked hidden state and disables the floating sidebar.
+Handlers are attached on `MainContent`'s `.key_context("main_view")` div via `cx.listener`. The `Popup` crate additionally binds `up`/`down`/`ctrl-p`/`ctrl-n`/`escape`/`cmd-t` in the `Popup` key context (`cmd-t → Dismiss` while the popup is focused, which toggles against the global open binding). The file also carries Arc-browser shortcut reference tables as comments.
 
-The main content area listens to `MouseMoveEvent` to hide the floating sidebar when the cursor is over the main area.
+### Sidebar state machine (`crates/ui/src/sidebar/`)
 
-### macOS platform integration (`src/platform.rs`)
+`SidebarView` (sidebar/mod.rs) owns two related states:
 
-GPUI does not expose hiding the window traffic-light buttons, so `src/platform.rs` uses Objective-C runtime calls via the `objc`/`cocoa`/`raw-window-handle` crates to find the `NSWindow` and set the standard close/minimize/zoom buttons hidden. This is a no-op on non-macOS platforms.
+- **Docked**: open/closed with animated `width_anim` (16 ms timer lerp loop spawned via `cx.spawn`).
+- **Floating**: appears when the docked sidebar is hidden and the cursor hovers the left edge; driven by `floating_visible` / `floating_progress` (same lerp pattern, duplicated).
 
-The sidebar calls this during render to hide traffic lights when the sidebar is fully collapsed and no floating sidebar is visible:
+Toggle rule (`SidebarView::toggle`): if the floating sidebar is visible while docked is hidden, toggling restores the docked sidebar immediately (no slide-out); otherwise it toggles docked-hidden and disables floating. `AppSidebar` (app_sidebar.rs) is the `RenderOnce` component that renders the custom traffic lights, spaces row, essential tiles, folders, and tab rows from the shared `SidebarContext` entity (it borrows via `read(cx)` — no whole-context clone per frame). `SidebarView` emits `SidebarEvent::Search` — currently with **no subscriber** (a commented-out subscribe stub in `main_content.rs` references a nonexistent `SidebarEvent::Toggle`).
 
-```rust
-set_traffic_lights_hidden(window, self.width_anim < 1.0 && self.floating_progress <= 0.0);
-```
+### Search popup (`crates/ui/src/search/`)
 
-## Asset handling
+`Popup` is a `cmd-t`-style overlay: filter-as-you-type over a static item list, keyboard navigation (`confirm`/`select_next`/`select_prev`/`dismiss` bound in the `Popup` key context), emits `PopupEvent::Dismiss` / `Open(BrowserData)` / `Search(SharedString)`. While visible, its `render` claims focus for its input (the modal-focus pattern that wins the parent-before-child render race). It has a `reset_after_dismiss` flag, currently hardcoded `false` at the only construction site.
 
-Assets are embedded at compile time with `rust_embed`:
+### Text input (`crates/input`)
 
-- `Assets` struct in `src/assets.rs` embeds `./assets/icons/*.svg` and exposes them through GPUI's `AssetSource` trait.
+A custom single-line `TextInput` entity implementing `EntityInputHandler` plus a hand-written `TextElement` (custom GPUI element with its own layout/paint). Adapted from GPUI's `text_input` example; handles UTF-16 offsets, grapheme/word boundaries, clipboard, and scoped key bindings.
+
+### Theme and widgets (`crates/component`)
+
+`Theme` + `ThemeColor` presets (`pink()` is active via `init`, `dark_purple()` is unused), exposed through the `ActiveTheme` trait (`cx.theme()`). Widgets: `tile`, `text_box`, `list_row`, `favicon`, `button` (focusable, keyed-state focus handles), `window_control` (custom traffic lights). Some UI (popup, sidebar badges) still hardcodes colors instead of reading the theme — theme adoption is partial.
+
+### Domain model (`crates/context`)
+
+- **`SpaceContext` / `SpaceId`**: a browser space (name, 1-based number, profile id, sidebar).
+- **`ProfileContext` / `ProfileId`**: profile identity (pseudonym, optional email).
+- **`SidebarContext`**: node tree as `HashMap<NodeId, Node>` plus ordered `folder`, `essential`, `pinned` lists (`pinned` currently unused; `essential` is the renamed favorites/pinned-tabs row).
+- **`Node` / `NodeId`**: tree node; `NodeData` is `Folder` (child ids + expand flag) or `Tab` (`TabData` + open flag).
+- **`TabData`**: `Browser(BrowserData)` or `ApiRequest(ApiRequestData)` (legacy REST).
+- **`BrowserData::favicon_for`** resolves favicons through `google.com/s2/favicons`.
+- **`config/`**: TOML `Config` trait — currently dead code (never called; uses blocking `fs::read_to_string` and `CARGO_MANIFEST_DIR`, which won't work in an installed build).
+
+### macOS platform integration (`crates/ui/src/platform.rs`)
+
+Uses Objective-C runtime calls (`objc2`, `raw-window-handle`) to hide the window traffic-light buttons. Native lights are replaced by the custom `WindowControl` in the sidebar header; hiding them every render is a recorded design decision (window controls intentionally vanish with the sidebar — see design-decisions skill). There is no non-macOS stub — the app compiles on macOS only.
+
+## Asset handling (`crates/assets`)
+
+- `Assets` embeds `../../assets/icons/*.svg` and `../../assets/mock/**/*.md` via `rust_embed`. Note: the mock directory now contains TOML files, so the `**/*.md` pattern embeds nothing.
+- Fonts are `include_bytes!`-ed and registered via `load_fonts_asset` at startup; `FONT_SUPPORT` lists registered names (4 of the 6 shipped TTFs).
 - SVGs are referenced by path, e.g. `svg().path("icons/sidebar-left.svg")`.
-- Fonts are included with `include_bytes!` and loaded into the GPUI text system at startup via `load_fonts_asset`.
-- `FONT_SUPPORT` is a hard-coded array; adding a new bundled font means adding an entry there.
 
 ## Code conventions
 
 - Rust edition 2024.
-- Import style: `use gpui::{..., prelude::*};` followed by crate-relative imports (`crate::action::...`).
+- Workspace dependencies are declared in the root `Cargo.toml` and referenced with `*.workspace = true` in member crates.
+- Import style: `use gpui::{..., prelude::*};` followed by workspace crate imports (`context::...`, `ui::...`, `component::...`).
 - GPUI element chains are heavily indented and chained; keep this style.
-- Hex colors are written as `rgb(0x636080)` and sizes with `px(...)`.
-- Component builders follow the `new()` + consuming setter pattern (`width(...)`, `toggle_sidebar(...)`), then implement `RenderOnce`.
-- State IDs are sometimes attached to elements for debugging (`#sidebar-hover-zone`, `#floating-sidebar`, `#sidebar-resize-handle`).
+- Colors as `rgb(0x...)`, sizes with `px(...)`.
+- Components follow the `new()` + consuming setter pattern, then implement `Render` or `RenderOnce`.
+- Debug element IDs: `#sidebar-hover-zone`, `#floating-sidebar`, `#sidebar-resize-handle`.
 
 ## Testing approach
 
-There are currently no unit tests, integration tests, or UI tests in the repository. When adding testable logic (e.g. request handling, profile switching, sidebar state transitions), prefer plain Rust modules/functions and add tests under `src/` or in a `tests/` directory as appropriate.
+Nearly zero coverage — the only test is a cargo-new template leftover (`crates/setting`), plus a WIP harness stub in `crates/component/src/button.rs`. Best first targets: pure functions in `crates/input/src/input.rs` (UTF-16 offsets, grapheme/word boundaries), sidebar state transitions, `sidebar/util.rs` `animating`, and `Popup::filtered`. UI changes are verified manually with `cargo run`.
 
 ## CI/CD
 
-### Release binary (`deploy.yml`)
+**No CI is currently active.** Both workflows under `.github/workflows/` are fully commented out:
 
-- Triggers on tags `v*` or manually.
-- Runs on `macos-latest` (`aarch64-apple-darwin`).
-- Builds with `cargo build --release --locked`.
-- Packages `target/release/silly` into `dist/silly-aarch64-apple-darwin.tar.gz`.
-- For tag pushes, attaches the archive to a GitHub Release.
-- For manual runs, uploads it as an Actions artifact.
-- Note: the produced binary is unsigned; Gatekeeper will block it until the user right-clicks → Open.
-
-### Static site (`page.yml`)
-
-- Triggers on pushes to `develop` that touch `page/**` or `.github/workflows/page.yml`, and manually.
-- Uses `shalzz/zola-deploy-action@v0.19.2` to build `page/` and deploy to `gh-pages`.
-- Site base URL is configured as `https://ddeedev.github.io/SillyProject` in `page/config.toml`.
+- `deploy.yml` (macOS aarch64 release): intended to run on tags `v*` and package the binary. **Before re-enabling, fix the stale `silly` binary name — the binary is `monas`** (the tar step would fail).
+- `page.yml` (Zola site → gh-pages): references the deleted `page/` directory; re-enable only if the site returns.
 
 ## Branches
 
@@ -181,10 +237,12 @@ There are currently no unit tests, integration tests, or UI tests in the reposit
 
 ## Important gotchas
 
-1. **GPUI dependency has native platform requirements.** The app will not build/run without the GPUI prerequisites. See README.md for the link to gpui.rs installation instructions.
-2. **macOS-only native code.** `src/platform.rs` is the only place that reaches into AppKit. Keep it isolated; changes there should not leak into GPUI view code.
-3. **Release CI only targets Apple Silicon macOS.** Do not expect Linux/Windows release binaries from the current workflows.
-4. **No tests exist yet.** Verify changes by running `cargo run` and manually exercising the UI.
-5. **Unused imports currently generate warnings.** The codebase currently has compiler warnings from unused imports; do not treat a clean warning-free build as required unless asked.
-6. **Future monorepo planned.** `NOTE.md` mentions moving the "Folder" feature into a new crate and making this a Rust monorepo. If you add substantial new functionality, consider whether it should live in a new crate under `crates/` (currently empty).
-7. **Roadmap is the source of truth for features.** Check `ROADMAP.md` before starting major work; many core features (REST requests, profiles, auth, history, cache) are still "Plan".
+1. **The current focus is the browser.** REST-client types in `crates/context/src/api/` are dormant, not dead — the feature may return later. Keep them intact.
+2. **macOS-only build (recorded decision — see design-decisions skill).** `cmd_key!` and `platform_bindings` in `crates/input/src/input.rs` have both platform arms, but `option_key!` is still only defined under `#[cfg(target_os = "macos")]` while being used in the cfg-free `word_bindings`, and `platform.rs` has no non-macOS stub.
+3. **Naming:** package/binary and app menu are `monas`/`Monas`; only older docs still say "Silly". Prefer `monas` for anything new.
+4. **Mid-refactor debris:** unused `Global` impl, `_new_space`/`_with_space`, unsubscribed `SidebarEvent::Search` (plus a commented-out subscribe stub referencing a nonexistent `SidebarEvent::Toggle`), `CloseTab` with no handler, `dark_purple()` theme, `reset_after_dismiss` hardcoded `false`, ~16 unread `ThemeColor` fields. **Two known live bugs** (from the 2026-11-06 scan): `Popup::focus` registers a new `cx.observe` per call and is called every rendered frame while visible (unbounded observer growth), and `MainContent::render` registers `window.on_next_frame` every render (forces a continuous redraw loop).
+5. **Per-render clones:** `AppSidebar` now borrows `SidebarContext` via `read(cx)` with targeted clones (folder list, node names) — the old whole-context deep clone is gone. Keep it that way.
+6. **Mock data is hardcoded** in `crates/app/src/view/mod.rs`; the embedded-mock glob matches nothing; the `config/` module is dead. Persistence is entirely unwired.
+7. **GPUI deps are git-pinned** to zed-industries/zed via `Cargo.lock`; `http_client` is declared as a workspace dependency but used by no crate.
+8. **Keep the build warning-free** where possible; verify UI changes by running `cargo run`.
+9. **The skill files are hardlinks**, not symlinks — each skill (`mentor`, `repo-scan`, `design-decisions`) is one inode shared across `.claude/`, `.agents/`, `.opencode/`; one write updates all three copies.
