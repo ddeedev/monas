@@ -6,6 +6,8 @@ Guide for AI agents working in the **monas** repository.
 
 **monas** is an Arc-like, macOS-first **web browser** written in Rust using the [GPUI](https://www.gpui.rs/) UI framework. It is in early development (v0.1.0).
 
+> **Motto:** a crate boundary earns its cost when it turns a rule you care about into a compiler error. Here the rule is: widgets don't know the domain; feature views do; the app crate is the composition root. Per-crate READMEs (`crates/component/README.md`, `crates/ui/README.md`) document the rule for contributors.
+
 > **Current focus:** this project began as "Silly", a REST API client with Arc-browser-style UX. The author's current focus is building the **browser** — that is where all active work happens. The REST-client feature may return later, so its types (`crates/context/src/api/`, `TabData::ApiRequest`) are kept but dormant. `ROADMAP.md` predates the pivot; treat it as historical.
 
 The codebase is a Rust workspace of eight crates under `crates/`. The author uses a hobby-style workflow with `main`, `develop`.
@@ -26,6 +28,8 @@ Unless the human explicitly opts out in the current session, an agent MUST:
 
 The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](.claude/skills/mentor/SKILL.md). It is mirrored (hardlinked) into `.agents/skills/mentor/` and `.opencode/skills/mentor/` — one write updates all copies. Load and follow it.
 
+Standing **design decisions** (intentional behavior, never flag as bugs) live in the design-decisions skill: [`.claude/skills/design-decisions/SKILL.md`](.claude/skills/design-decisions/SKILL.md). Consult it before reviewing or flagging findings.
+
 ## Repository structure
 
 ```text
@@ -37,7 +41,7 @@ The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](
 │   │   └── src/
 │   │       ├── main.rs     # Entrypoint → AppRunner::run()
 │   │       ├── app.rs      # AppRunner: application, window, startup wiring
-│   │       ├── menu.rs     # macOS application menu (still titled "Silly")
+│   │       ├── menu.rs     # macOS application menu (titled "Monas"; View menu wires ToggleSidebar)
 │   │       └── view/
 │   │           ├── mod.rs            # Mock space data (hardcoded in code)
 │   │           ├── main_content.rs   # MainContent: root view, spaces, actions
@@ -46,12 +50,14 @@ The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](
 │   │                       # OpenSearchPopup, SwitchSpace) + key bindings
 │   ├── assets/             # Embedded assets (rust_embed SVG icons, fonts)
 │   │   └── src/assets.rs   # Assets AssetSource + FONT_SUPPORT + load_fonts_asset
-│   ├── component/          # Homegrown GPUI widgets + theme
+│   ├── component/          # Homegrown GPUI widgets + theme (domain-agnostic — see crates/component/README.md)
 │   │   └── src/
 │   │       ├── component.rs        # Crate root
 │   │       ├── theme/mod.rs        # Theme, ActiveTheme, init() (pink preset)
 │   │       ├── theme/theme_color.rs
 │   │       ├── tile.rs, text_box.rs, list_row.rs, favicon.rs
+│   │       ├── button.rs          # Button widget (focusable by default, keyed-state focus handles)
+│   │       ├── window_control.rs  # WindowControl: custom traffic lights (close/minimize/zoom)
 │   ├── context/            # Domain model (no GPUI dependency)
 │   │   └── src/
 │   │       ├── context.rs          # Crate re-exports
@@ -66,7 +72,7 @@ The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](
 │   │                        # (adapted from GPUI's text_input example)
 │   ├── setting/            # User settings crate (placeholder, currently dead code)
 │   │   └── src/setting.rs
-│   └── ui/                  # Larger GPUI views + platform helpers
+│   └── ui/                  # Larger GPUI views + platform helpers (feature views — see crates/ui/README.md)
 │       └── src/
 │           ├── ui.rs
 │           ├── sidebar/mod.rs       # SidebarView: docked/floating state machine
@@ -80,7 +86,7 @@ The full protocol lives in the mentor skill: [`.claude/skills/mentor/SKILL.md`](
 │   ├── fonts/              # Bundled TTF fonts (6 shipped, 4 in FONT_SUPPORT)
 │   └── mock/               # Mock TOML files (NOT currently embedded — see gotchas)
 ├── .github/workflows/      # deploy.yml (release) — currently fully commented out
-├── .claude/skills/         # mentor/ + repo-scan/ skills (hardlinked into .agents/ and .opencode/)
+├── .claude/skills/         # mentor/ + repo-scan/ + design-decisions/ skills (hardlinked into .agents/ and .opencode/)
 ├── .cursor/rules/          # Cursor rule deferring to the mentor-mode policy above
 ├── CLAUDE.md               # Imports this file for Claude Code
 ├── README.md               # Basic run instructions (skeletal)
@@ -102,7 +108,7 @@ cargo run
 cargo build --release --locked
 ```
 
-There are very few tests (only leftover template tests), no Makefile, and no custom build scripts.
+There are very few tests (one cargo-new template leftover in `crates/setting`, plus a WIP test-harness stub in `crates/component/src/button.rs` with no tests yet), no Makefile, and no custom build scripts.
 
 ## Architecture and control flow
 
@@ -141,9 +147,12 @@ Application
 
 `MainContent` is `Focusable` + `Global` (the `Global` impl is currently unused), tracks the 1-based `current_space`, and builds each space in `build_space`:
 
-- Moves the `SidebarContext` out of the mock `SpaceContext` into its own entity and observes it (`cx.observe(...).detach()`), so sidebar data changes trigger re-render.
+- Moves the `SidebarContext` out of the mock `SpaceContext` into its own entity and observes it (`cx.observe(...).detach()`), so sidebar data changes trigger re-render. (The `Entity<SpaceContext>` itself is observed too, but nothing ever updates it — wiring without a writer until persistence lands.)
 - Creates the `TextInput` entities for the sidebar search field and the popup.
-- Subscribes to `PopupEvent` (`Dismiss` / `Open` / `Search`) — the `Open`/`Search` handlers are TODO stubs.
+- Subscribes to `PopupEvent` — every event closes the popup; the `Open`/`Search` handlers are TODO stubs.
+- **Focus safety net:** `render` re-focuses `self.focus_handle` whenever `contains_focused` fails, so scoped `main_view` keybindings survive any focused element being unmounted (hidden sidebar, space switch, popup close). This is the fix pattern for the orphaned-focus bug class: a focused element that leaves the tree drops the context stack to the dispatch-tree root, and scoped bindings stop matching until focus returns to a live node.
+
+Focus rules to remember when adding UI here: elements with `track_focus` (incl. `Button`, which is focusable by default) steal focus on mousedown; parents render before children in a frame, and `contains_focused` reads the *last rendered* frame — so a parent's render-time focus steal beats a child that mounts and focuses in the same frame (modals must claim focus in their own `render` while visible).
 
 ### Actions and key bindings (`crates/action`)
 
@@ -156,7 +165,7 @@ Declared with `actions!(app, [ToggleSidebar, Quit, CloseTab, ResetSidebar, OpenS
 - `ctrl-1/2/3` → `SwitchSpace(n)` (global)
 - `cmd-t` → `OpenSearchPopup` (global)
 
-Handlers are attached on `MainContent`'s `.key_context("main_view")` div via `cx.listener`. The file also carries Arc-browser shortcut reference tables as comments.
+Handlers are attached on `MainContent`'s `.key_context("main_view")` div via `cx.listener`. The `Popup` crate additionally binds `up`/`down`/`ctrl-p`/`ctrl-n`/`escape`/`cmd-t` in the `Popup` key context (`cmd-t → Dismiss` while the popup is focused, which toggles against the global open binding). The file also carries Arc-browser shortcut reference tables as comments.
 
 ### Sidebar state machine (`crates/ui/src/sidebar/`)
 
@@ -165,11 +174,11 @@ Handlers are attached on `MainContent`'s `.key_context("main_view")` div via `cx
 - **Docked**: open/closed with animated `width_anim` (16 ms timer lerp loop spawned via `cx.spawn`).
 - **Floating**: appears when the docked sidebar is hidden and the cursor hovers the left edge; driven by `floating_visible` / `floating_progress` (same lerp pattern, duplicated).
 
-Toggle rule (`SidebarView::toggle`): if the floating sidebar is visible while docked is hidden, toggling restores the docked sidebar immediately (no slide-out); otherwise it toggles docked-hidden and disables floating. `AppSidebar` (app_sidebar.rs) is the `RenderOnce` component that renders profile banner, spaces row, favorites, folders, and tab rows from the shared `SidebarContext` entity. `SidebarView` emits `SidebarEvent::Search` — currently with **no subscriber**.
+Toggle rule (`SidebarView::toggle`): if the floating sidebar is visible while docked is hidden, toggling restores the docked sidebar immediately (no slide-out); otherwise it toggles docked-hidden and disables floating. `AppSidebar` (app_sidebar.rs) is the `RenderOnce` component that renders the custom traffic lights, spaces row, essential tiles, folders, and tab rows from the shared `SidebarContext` entity (it borrows via `read(cx)` — no whole-context clone per frame). `SidebarView` emits `SidebarEvent::Search` — currently with **no subscriber** (a commented-out subscribe stub in `main_content.rs` references a nonexistent `SidebarEvent::Toggle`).
 
 ### Search popup (`crates/ui/src/search/`)
 
-`Popup` is a `cmd-t`-style overlay: filter-as-you-type over a static item list, keyboard navigation (`confirm`/`select_next`/`select_prev` bound in the `Popup` key context), emits `PopupEvent::Dismiss` / `Open(String)` / `Search(String)`.
+`Popup` is a `cmd-t`-style overlay: filter-as-you-type over a static item list, keyboard navigation (`confirm`/`select_next`/`select_prev`/`dismiss` bound in the `Popup` key context), emits `PopupEvent::Dismiss` / `Open(BrowserData)` / `Search(SharedString)`. While visible, its `render` claims focus for its input (the modal-focus pattern that wins the parent-before-child render race). It has a `reset_after_dismiss` flag, currently hardcoded `false` at the only construction site.
 
 ### Text input (`crates/input`)
 
@@ -177,13 +186,13 @@ A custom single-line `TextInput` entity implementing `EntityInputHandler` plus a
 
 ### Theme and widgets (`crates/component`)
 
-`Theme` + `ThemeColor` presets (`pink()` is active via `init`, `dark_purple()` is unused), exposed through the `ActiveTheme` trait (`cx.theme()`). Widgets: `tile`, `text_box`, `list_row`, `favicon`. Some UI (popup, sidebar badges) still hardcodes colors instead of reading the theme — theme adoption is partial.
+`Theme` + `ThemeColor` presets (`pink()` is active via `init`, `dark_purple()` is unused), exposed through the `ActiveTheme` trait (`cx.theme()`). Widgets: `tile`, `text_box`, `list_row`, `favicon`, `button` (focusable, keyed-state focus handles), `window_control` (custom traffic lights). Some UI (popup, sidebar badges) still hardcodes colors instead of reading the theme — theme adoption is partial.
 
 ### Domain model (`crates/context`)
 
 - **`SpaceContext` / `SpaceId`**: a browser space (name, 1-based number, profile id, sidebar).
 - **`ProfileContext` / `ProfileId`**: profile identity (pseudonym, optional email).
-- **`SidebarContext`**: node tree as `HashMap<NodeId, Node>` plus ordered `folder`, `favorites`, `pinned` lists (`pinned` currently unused).
+- **`SidebarContext`**: node tree as `HashMap<NodeId, Node>` plus ordered `folder`, `essential`, `pinned` lists (`pinned` currently unused; `essential` is the renamed favorites/pinned-tabs row).
 - **`Node` / `NodeId`**: tree node; `NodeData` is `Folder` (child ids + expand flag) or `Tab` (`TabData` + open flag).
 - **`TabData`**: `Browser(BrowserData)` or `ApiRequest(ApiRequestData)` (legacy REST).
 - **`BrowserData::favicon_for`** resolves favicons through `google.com/s2/favicons`.
@@ -191,7 +200,7 @@ A custom single-line `TextInput` entity implementing `EntityInputHandler` plus a
 
 ### macOS platform integration (`crates/ui/src/platform.rs`)
 
-Uses Objective-C runtime calls (`objc2`, `raw-window-handle`) to hide the window traffic-light buttons. The sidebar currently calls `set_traffic_lights_hidden(window, true)` **unconditionally** every render. There is no non-macOS stub — the app compiles on macOS only.
+Uses Objective-C runtime calls (`objc2`, `raw-window-handle`) to hide the window traffic-light buttons. Native lights are replaced by the custom `WindowControl` in the sidebar header; hiding them every render is a recorded design decision (window controls intentionally vanish with the sidebar — see design-decisions skill). There is no non-macOS stub — the app compiles on macOS only.
 
 ## Asset handling (`crates/assets`)
 
@@ -211,7 +220,7 @@ Uses Objective-C runtime calls (`objc2`, `raw-window-handle`) to hide the window
 
 ## Testing approach
 
-Nearly zero coverage — the only tests are cargo-new template leftovers (`crates/settings`, `crates/component`). Best first targets: pure functions in `crates/input/src/input.rs` (UTF-16 offsets, grapheme/word boundaries), sidebar state transitions, and `SidebarContext` construction. UI changes are verified manually with `cargo run`.
+Nearly zero coverage — the only test is a cargo-new template leftover (`crates/setting`), plus a WIP harness stub in `crates/component/src/button.rs`. Best first targets: pure functions in `crates/input/src/input.rs` (UTF-16 offsets, grapheme/word boundaries), sidebar state transitions, `sidebar/util.rs` `animating`, and `Popup::filtered`. UI changes are verified manually with `cargo run`.
 
 ## CI/CD
 
@@ -229,11 +238,11 @@ Nearly zero coverage — the only tests are cargo-new template leftovers (`crate
 ## Important gotchas
 
 1. **The current focus is the browser.** REST-client types in `crates/context/src/api/` are dormant, not dead — the feature may return later. Keep them intact.
-2. **macOS-only build.** Two known cross-platform compile breaks: `option_key!` in `crates/input/src/input.rs` is only defined under `#[cfg(target_os = "macos")]` but used unguarded, and `platform.rs` has no non-macOS stub.
-3. **Naming is split three ways:** package/binary `monas`, app menu still "Silly" (`menu.rs`), older docs say "Silly". Prefer `monas` for anything new.
-4. **Mid-refactor debris:** `text_input` → `input` crate rename and the `sidebar.rs` → `sidebar/` split may be uncommitted; some dead code exists (unused `Global` impl, `_new_space`/`_with_space`, duplicate `SidebarEvent`, unsubscribed `SidebarEvent::Search`, `CloseTab` with no handler, `dark_purple()` theme, ~16 unread `ThemeColor` fields).
-5. **Per-render deep clone:** `AppSidebar` clones the whole `SidebarContext` (all nodes) every frame (`app_sidebar.rs`). Be careful adding more of this pattern.
+2. **macOS-only build (recorded decision — see design-decisions skill).** `cmd_key!` and `platform_bindings` in `crates/input/src/input.rs` have both platform arms, but `option_key!` is still only defined under `#[cfg(target_os = "macos")]` while being used in the cfg-free `word_bindings`, and `platform.rs` has no non-macOS stub.
+3. **Naming:** package/binary and app menu are `monas`/`Monas`; only older docs still say "Silly". Prefer `monas` for anything new.
+4. **Mid-refactor debris:** unused `Global` impl, `_new_space`/`_with_space`, unsubscribed `SidebarEvent::Search` (plus a commented-out subscribe stub referencing a nonexistent `SidebarEvent::Toggle`), `CloseTab` with no handler, `dark_purple()` theme, `reset_after_dismiss` hardcoded `false`, ~16 unread `ThemeColor` fields. **Two known live bugs** (from the 2026-11-06 scan): `Popup::focus` registers a new `cx.observe` per call and is called every rendered frame while visible (unbounded observer growth), and `MainContent::render` registers `window.on_next_frame` every render (forces a continuous redraw loop).
+5. **Per-render clones:** `AppSidebar` now borrows `SidebarContext` via `read(cx)` with targeted clones (folder list, node names) — the old whole-context deep clone is gone. Keep it that way.
 6. **Mock data is hardcoded** in `crates/app/src/view/mod.rs`; the embedded-mock glob matches nothing; the `config/` module is dead. Persistence is entirely unwired.
 7. **GPUI deps are git-pinned** to zed-industries/zed via `Cargo.lock`; `http_client` is declared as a workspace dependency but used by no crate.
 8. **Keep the build warning-free** where possible; verify UI changes by running `cargo run`.
-9. **The skill files are hardlinks**, not symlinks — each skill (`mentor`, `repo-scan`) is one inode shared across `.claude/`, `.agents/`, `.opencode/`; one write updates all three copies.
+9. **The skill files are hardlinks**, not symlinks — each skill (`mentor`, `repo-scan`, `design-decisions`) is one inode shared across `.claude/`, `.agents/`, `.opencode/`; one write updates all three copies.
