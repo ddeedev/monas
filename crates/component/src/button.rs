@@ -232,7 +232,7 @@ impl RenderOnce for Button {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use gpui::{
         ClickEvent, Context, FocusHandle, KeyDownEvent, KeyUpEvent, Keystroke, Modifiers,

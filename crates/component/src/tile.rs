@@ -46,3 +46,8 @@ impl RenderOnce for Tile {
             .children(self.child)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // Noting to test in this component
+}

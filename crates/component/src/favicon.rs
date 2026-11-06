@@ -66,3 +66,16 @@ impl RenderOnce for Favicon {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_remote_sources() {
+        assert!(Favicon::new("https://a.com/f.ico").is_remote());
+        assert!(Favicon::new("http://a.com/f.ico").is_remote());
+        assert!(!Favicon::new("icons/globe.svg").is_remote());
+        assert!(!Favicon::new("").is_remote());
+    }
+}
