@@ -1,0 +1,19 @@
+title = "BUY ME A COFFEE"
+
+[wallet]
+
+[wallet.ethereum]
+address = "0x792fFDd244203561FC41119E93b0F18E385D4471"
+
+[wallet.evm]
+address = "0x792fFDd244203561FC41119E93b0F18E385D4471"
+
+[wallet.bitcoin]
+address = "bc1q9x3m0shjpj9cgthn7pe0cdaxchr7jyte7h83xy"
+
+[wallet.cosmos]
+address = "cosmos1v23u9k5c8pwm87jtvxwwmuzt8nj250xu635qc9"
+bytes = "[98 163 194 218 152 56 93 179 250 75 97 156 237 240 75 60 228 170 60 220]"
+
+[wallet.solana]
+address = "ESrZqePUXeGSY6kvm2aBgoiaKtuHwyU7ruU2Hfsr2XTX"
